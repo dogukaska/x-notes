@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "@/app/actions";
 import MoreMenu from "./MoreMenu";
 
 export default function Sidebar({
@@ -21,6 +20,7 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   const navItemClass = (active: boolean) =>
     `flex items-center gap-4 px-3 py-3 rounded-full hover:bg-hover transition cursor-pointer w-fit ${
@@ -79,9 +79,9 @@ export default function Sidebar({
         )}
       </div>
 
-      <form action={signOut} className="mb-2">
+      <div className="relative mb-2">
         <button
-          type="submit"
+          onClick={() => setAccountMenuOpen((v) => !v)}
           title={email}
           className="w-full flex items-center gap-3 px-3 py-3 rounded-full hover:bg-hover transition text-left"
         >
@@ -96,7 +96,8 @@ export default function Sidebar({
             <span className="text-xs text-muted truncate">@{username}</span>
           </span>
         </button>
-      </form>
+        {accountMenuOpen && <MoreMenu onClose={() => setAccountMenuOpen(false)} />}
+      </div>
     </aside>
   );
 }
