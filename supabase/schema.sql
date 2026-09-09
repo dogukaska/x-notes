@@ -33,7 +33,15 @@ create policy "notes_delete_own" on public.notes
   for delete using (auth.uid() = user_id);
 
 -- Realtime yayınına ekle (canlı güncellemeler için)
-alter publication supabase_realtime add table public.notes;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notes'
+  ) then
+    alter publication supabase_realtime add table public.notes;
+  end if;
+end $$;
 
 -- Görseller için private storage bucket'i
 insert into storage.buckets (id, name, public)
@@ -51,3 +59,32 @@ create policy "note_images_insert_own" on storage.objects
 drop policy if exists "note_images_delete_own" on storage.objects;
 create policy "note_images_delete_own" on storage.objects
   for delete using (bucket_id = 'note-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "note_images_update_own" on storage.objects;
+create policy "note_images_update_own" on storage.objects
+  for update using (bucket_id = 'note-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Profil bilgileri (isim, kullanıcı adı, biyografi, avatar/kapak görseli)
+create table if not exists public.profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  display_name text not null default 'Sen',
+  username text not null default 'kullanici',
+  bio text not null default '',
+  avatar_path text,
+  banner_path text,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "profiles_select_own" on public.profiles;
+create policy "profiles_select_own" on public.profiles
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "profiles_insert_own" on public.profiles;
+create policy "profiles_insert_own" on public.profiles
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "profiles_update_own" on public.profiles;
+create policy "profiles_update_own" on public.profiles
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);

@@ -12,13 +12,15 @@ export type ComposeResult = {
 };
 
 export default function ComposeModal({
-  email,
+  displayName,
+  avatarUrl,
   editingNote,
   existingImageUrl,
   onClose,
   onSubmit,
 }: {
-  email: string;
+  displayName: string;
+  avatarUrl: string | null;
   editingNote: Note | null;
   existingImageUrl: string | null;
   onClose: () => void;
@@ -31,7 +33,7 @@ export default function ComposeModal({
   const [posting, setPosting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const initial = email.charAt(0).toUpperCase();
+  const initial = displayName.charAt(0).toUpperCase();
   const isEdit = !!editingNote;
 
   useEffect(() => {
@@ -108,9 +110,18 @@ export default function ComposeModal({
         </div>
 
         <div className="flex gap-3 px-4 pb-4 flex-1">
-          <span className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-white shrink-0">
-            {initial}
-          </span>
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt=""
+              className="w-10 h-10 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <span className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-white shrink-0">
+              {initial}
+            </span>
+          )}
           <div className="flex-1 flex flex-col min-w-0">
             <textarea
               ref={textareaRef}

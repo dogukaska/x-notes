@@ -25,10 +25,12 @@ export default async function LoginPage({
 
         <form action={signIn} className="flex flex-col gap-3">
           <input
-            name="email"
-            type="email"
+            name="identifier"
+            type="text"
             required
-            placeholder="E-posta"
+            autoCapitalize="off"
+            autoCorrect="off"
+            placeholder="Kullanıcı adı veya e-posta"
             className="w-full rounded-md border border-border bg-transparent px-3 py-3 text-[15px] placeholder:text-muted focus:outline-none focus:border-accent"
           />
           <input

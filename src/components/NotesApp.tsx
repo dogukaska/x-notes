@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Note } from "@/lib/types";
+import { useProfile } from "@/lib/useProfile";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import ComposeModal, { ComposeResult } from "./ComposeModal";
@@ -21,6 +22,9 @@ export default function NotesApp({
   userId: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const { profile, avatarUrl: myAvatarUrl } = useProfile(userId, email);
+  const displayName = profile?.display_name ?? email.split("@")[0];
+  const username = profile?.username ?? email.split("@")[0];
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -180,10 +184,16 @@ export default function NotesApp({
 
   return (
     <div className="min-h-screen">
-      <MobileHeader email={email} />
+      <MobileHeader avatarUrl={myAvatarUrl} displayName={displayName} />
       <div className="flex justify-center">
       <div className="flex w-full max-w-[1265px]">
-        <Sidebar email={email} onCompose={openCompose} />
+        <Sidebar
+          email={email}
+          displayName={displayName}
+          username={username}
+          avatarUrl={myAvatarUrl}
+          onCompose={openCompose}
+        />
 
         <main className="flex-1 min-w-0 max-w-[600px] border-x border-border">
           <h1 className="hidden md:block sticky top-0 z-10 bg-background/80 backdrop-blur px-4 py-3 text-xl font-bold border-b border-border">
@@ -201,7 +211,9 @@ export default function NotesApp({
               <NoteCard
                 key={note.id}
                 note={note}
-                email={email}
+                displayName={displayName}
+                username={username}
+                avatarUrl={myAvatarUrl}
                 imageUrl={note.image_path ? imageUrls[note.image_path] ?? null : null}
                 onEdit={openEdit}
                 onDelete={handleDelete}
@@ -227,7 +239,8 @@ export default function NotesApp({
 
       {composeOpen && (
         <ComposeModal
-          email={email}
+          displayName={displayName}
+          avatarUrl={myAvatarUrl}
           editingNote={editingNote}
           existingImageUrl={
             editingNote?.image_path ? imageUrls[editingNote.image_path] ?? null : null
