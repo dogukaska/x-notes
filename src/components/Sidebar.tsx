@@ -31,11 +31,10 @@ export default function Sidebar({
   return (
     <aside className="hidden md:flex flex-col justify-between w-[275px] shrink-0 h-screen sticky top-0 px-2 py-2">
       <div>
-        <div className="p-3">
-          <svg viewBox="0 0 24 24" className="w-8 h-8 fill-foreground">
-            <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.9 3.8L12 12 5.1 8.1 12 4.3ZM5 9.9l6 3.3v6.9l-6-3.3V9.9Zm8 10.2v-6.9l6-3.3v6.7l-6 3.5Z" />
-          </svg>
-        </div>
+        <Link href="/" className="block p-3 w-fit">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Notlar" className="w-9 h-9 rounded-lg" />
+        </Link>
         <nav className="flex flex-col gap-1 mt-2">
           <Link href="/" className={navItemClass(pathname === "/")}>
             <svg viewBox="0 0 24 24" className="w-7 h-7 fill-foreground">

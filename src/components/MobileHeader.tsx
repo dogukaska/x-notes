@@ -28,9 +28,8 @@ export default function MobileHeader({
       </Link>
 
       <Link href="/">
-        <svg viewBox="0 0 24 24" className="w-7 h-7 fill-foreground">
-          <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.9 3.8L12 12 5.1 8.1 12 4.3ZM5 9.9l6 3.3v6.9l-6-3.3V9.9Zm8 10.2v-6.9l6-3.3v6.7l-6 3.5Z" />
-        </svg>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Notlar" className="w-8 h-8 rounded-lg" />
       </Link>
 
       <div className="relative">
