@@ -202,7 +202,7 @@ export default function NotesApp({
 
   return (
     <div className="min-h-screen">
-      <MobileHeader avatarUrl={myAvatarUrl} displayName={displayName} />
+      <MobileHeader avatarUrl={myAvatarUrl} />
       <div className="flex justify-center">
       <div className="flex w-full max-w-[1265px]">
         <Sidebar

@@ -231,7 +231,7 @@ export default function CategoryPage({
   if (category === undefined) {
     return (
       <div className="min-h-screen">
-        <MobileHeader displayName={profile?.display_name ?? "Sen"} avatarUrl={myAvatarUrl} />
+        <MobileHeader avatarUrl={myAvatarUrl} />
         <div className="flex justify-center">
           <div className="flex w-full max-w-[1265px]">
             <Sidebar
@@ -252,7 +252,7 @@ export default function CategoryPage({
   if (category === null) {
     return (
       <div className="min-h-screen">
-        <MobileHeader displayName={profile?.display_name ?? "Sen"} avatarUrl={myAvatarUrl} />
+        <MobileHeader avatarUrl={myAvatarUrl} />
         <div className="flex justify-center">
           <div className="flex w-full max-w-[1265px]">
             <Sidebar
@@ -272,7 +272,7 @@ export default function CategoryPage({
 
   return (
     <div className="min-h-screen">
-      <MobileHeader displayName={profile?.display_name ?? "Sen"} avatarUrl={myAvatarUrl} />
+      <MobileHeader avatarUrl={myAvatarUrl} />
       <div className="flex justify-center">
         <div className="flex w-full max-w-[1265px]">
           <Sidebar
@@ -299,7 +299,7 @@ export default function CategoryPage({
               </div>
             </div>
 
-            <div className="relative h-[150px] bg-hover">
+            <div className="relative h-[150px] bg-background">
               {bannerUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
@@ -309,14 +309,12 @@ export default function CategoryPage({
             <div className="px-4">
               <div className="flex items-start justify-between">
                 <div className="w-24 h-24 -mt-12 rounded-full border-4 border-background bg-hover overflow-hidden">
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl font-bold bg-accent text-white">
-                      {category.display_name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={avatarUrl ?? "/logo.png"}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <button

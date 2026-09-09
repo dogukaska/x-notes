@@ -19,7 +19,6 @@ export default function Sidebar({
   avatarUrl: string | null;
   onCompose?: () => void;
 }) {
-  const initial = displayName.charAt(0).toUpperCase();
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -86,18 +85,12 @@ export default function Sidebar({
           title={email}
           className="w-full flex items-center gap-3 px-3 py-3 rounded-full hover:bg-hover transition text-left"
         >
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt=""
-              className="w-9 h-9 rounded-full object-cover shrink-0"
-            />
-          ) : (
-            <span className="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-bold text-white shrink-0">
-              {initial}
-            </span>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarUrl ?? "/logo.png"}
+            alt=""
+            className="w-9 h-9 rounded-full object-cover shrink-0 bg-hover"
+          />
           <span className="flex flex-col overflow-hidden">
             <span className="text-sm font-bold truncate">{displayName}</span>
             <span className="text-xs text-muted truncate">@{username}</span>

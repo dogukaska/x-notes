@@ -123,14 +123,12 @@ export default function EditProfileModal({
           {/* Avatar */}
           <div className="px-4">
             <div className="relative w-24 h-24 -mt-12 rounded-full border-4 border-background bg-hover overflow-hidden">
-              {avatarPreview ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-2xl font-bold bg-accent text-white">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={avatarPreview ?? "/logo.png"}
+                alt=""
+                className="w-full h-full object-cover"
+              />
               <input
                 ref={avatarInputRef}
                 type="file"

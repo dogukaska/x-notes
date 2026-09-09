@@ -111,7 +111,7 @@ export default function ProfilePage({
   if (loading || !profile) {
     return (
       <div className="min-h-screen">
-        <MobileHeader displayName="Sen" avatarUrl={null} />
+        <MobileHeader avatarUrl={null} />
         <div className="flex justify-center">
           <div className="flex w-full max-w-[1265px]">
             <Sidebar
@@ -131,7 +131,7 @@ export default function ProfilePage({
 
   return (
     <div className="min-h-screen">
-      <MobileHeader displayName={profile.display_name} avatarUrl={avatarUrl} />
+      <MobileHeader avatarUrl={avatarUrl} />
       <div className="flex justify-center">
         <div className="flex w-full max-w-[1265px]">
           <Sidebar
@@ -158,7 +158,7 @@ export default function ProfilePage({
               </div>
             </div>
 
-            <div className="relative h-[150px] bg-hover">
+            <div className="relative h-[150px] bg-background">
               {bannerUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
@@ -168,14 +168,12 @@ export default function ProfilePage({
             <div className="px-4">
               <div className="flex items-start justify-between">
                 <div className="w-24 h-24 -mt-12 rounded-full border-4 border-background bg-hover overflow-hidden">
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl font-bold bg-accent text-white">
-                      {profile.display_name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={avatarUrl ?? "/logo.png"}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <button
                   onClick={() => setEditOpen(true)}

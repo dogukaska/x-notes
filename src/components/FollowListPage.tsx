@@ -61,7 +61,7 @@ export default function FollowListPage({
 
   return (
     <div className="min-h-screen">
-      <MobileHeader displayName={profile?.display_name ?? "Sen"} avatarUrl={avatarUrl} />
+      <MobileHeader avatarUrl={avatarUrl} />
       <div className="flex justify-center">
         <div className="flex w-full max-w-[1265px]">
           <Sidebar
@@ -107,18 +107,12 @@ export default function FollowListPage({
                   href={`/u/${c.username}`}
                   className="flex gap-3 px-4 py-3 border-b border-border hover:bg-hover/40 transition"
                 >
-                  {c.avatar_path && avatarUrls[c.avatar_path] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={avatarUrls[c.avatar_path]}
-                      alt=""
-                      className="w-12 h-12 rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <span className="w-12 h-12 rounded-full bg-accent flex items-center justify-center font-bold text-white shrink-0 text-lg">
-                      {c.display_name.charAt(0).toUpperCase()}
-                    </span>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={c.avatar_path ? avatarUrls[c.avatar_path] ?? "/logo.png" : "/logo.png"}
+                    alt=""
+                    className="w-12 h-12 rounded-full object-cover shrink-0 bg-hover"
+                  />
                   <div className="min-w-0">
                     <div className="font-bold truncate">{c.display_name}</div>
                     <div className="text-muted text-sm truncate">@{c.username}</div>

@@ -23,16 +23,15 @@ export default function NoteCard({
   onEdit?: (note: Note) => void;
   onDelete?: (note: Note) => void;
 }) {
-  const initial = displayName.charAt(0).toUpperCase();
   const edited = note.updated_at !== note.created_at;
 
-  const avatar = avatarUrl ? (
+  const avatar = (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
-  ) : (
-    <span className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-white shrink-0">
-      {initial}
-    </span>
+    <img
+      src={avatarUrl ?? "/logo.png"}
+      alt=""
+      className="w-10 h-10 rounded-full object-cover shrink-0 bg-hover"
+    />
   );
 
   return (

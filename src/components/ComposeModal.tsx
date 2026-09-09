@@ -33,7 +33,6 @@ export default function ComposeModal({
   const [posting, setPosting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const initial = displayName.charAt(0).toUpperCase();
   const isEdit = !!editingNote;
 
   useEffect(() => {
@@ -110,18 +109,12 @@ export default function ComposeModal({
         </div>
 
         <div className="flex gap-3 px-4 pb-4 flex-1">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt=""
-              className="w-10 h-10 rounded-full object-cover shrink-0"
-            />
-          ) : (
-            <span className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-white shrink-0">
-              {initial}
-            </span>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarUrl ?? "/logo.png"}
+            alt={displayName}
+            className="w-10 h-10 rounded-full object-cover shrink-0 bg-hover"
+          />
           <div className="flex-1 flex flex-col min-w-0">
             <textarea
               ref={textareaRef}

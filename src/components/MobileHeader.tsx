@@ -4,27 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import MoreMenu from "./MoreMenu";
 
-export default function MobileHeader({
-  displayName,
-  avatarUrl,
-}: {
-  displayName: string;
-  avatarUrl: string | null;
-}) {
-  const initial = displayName.charAt(0).toUpperCase();
+export default function MobileHeader({ avatarUrl }: { avatarUrl: string | null }) {
   const [moreOpen, setMoreOpen] = useState(false);
 
   return (
     <header className="md:hidden sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur">
       <Link href="/profile">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
-        ) : (
-          <span className="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-bold text-white text-sm">
-            {initial}
-          </span>
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={avatarUrl ?? "/logo.png"}
+          alt=""
+          className="w-8 h-8 rounded-full object-cover bg-hover"
+        />
       </Link>
 
       <Link href="/">
