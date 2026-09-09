@@ -1,6 +1,7 @@
 export type Note = {
   id: string;
   user_id: string;
+  category_id: string | null;
   content: string;
   image_path: string | null;
   created_at: string;
@@ -14,5 +15,17 @@ export type Profile = {
   bio: string;
   avatar_path: string | null;
   banner_path: string | null;
+  updated_at: string;
+};
+
+export type Category = {
+  id: string;
+  user_id: string;
+  username: string;
+  display_name: string;
+  bio: string;
+  avatar_path: string | null;
+  banner_path: string | null;
+  created_at: string;
   updated_at: string;
 };

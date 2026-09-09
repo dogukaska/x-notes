@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Note } from "@/lib/types";
 import { formatRelativeTime } from "@/lib/formatTime";
 
@@ -8,6 +9,7 @@ export default function NoteCard({
   displayName,
   username,
   avatarUrl,
+  profileHref,
   imageUrl,
   onEdit,
   onDelete,
@@ -16,6 +18,7 @@ export default function NoteCard({
   displayName: string;
   username: string;
   avatarUrl: string | null;
+  profileHref?: string;
   imageUrl: string | null;
   onEdit?: (note: Note) => void;
   onDelete?: (note: Note) => void;
@@ -23,23 +26,27 @@ export default function NoteCard({
   const initial = displayName.charAt(0).toUpperCase();
   const edited = note.updated_at !== note.created_at;
 
+  const avatar = avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+  ) : (
+    <span className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-white shrink-0">
+      {initial}
+    </span>
+  );
+
   return (
     <article className="flex gap-3 px-4 py-3 border-b border-border hover:bg-hover/40 transition group">
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={avatarUrl}
-          alt=""
-          className="w-10 h-10 rounded-full object-cover shrink-0"
-        />
-      ) : (
-        <span className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-white shrink-0">
-          {initial}
-        </span>
-      )}
+      {profileHref ? <Link href={profileHref}>{avatar}</Link> : avatar}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1 text-[15px]">
-          <span className="font-bold truncate">{displayName}</span>
+          {profileHref ? (
+            <Link href={profileHref} className="font-bold truncate hover:underline">
+              {displayName}
+            </Link>
+          ) : (
+            <span className="font-bold truncate">{displayName}</span>
+          )}
           <span className="text-muted truncate">@{username}</span>
           <span className="text-muted">
             · {formatRelativeTime(note.created_at)}

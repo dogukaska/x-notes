@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/lib/useProfile";
+import { useCategories } from "@/lib/useCategories";
 import { Note } from "@/lib/types";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
@@ -29,6 +30,7 @@ export default function ProfilePage({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { profile, avatarUrl, bannerUrl, loading, reload } = useProfile(userId, email);
+  const { categories } = useCategories(userId);
   const [notes, setNotes] = useState<Note[]>([]);
   const [notesLoading, setNotesLoading] = useState(true);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
@@ -38,6 +40,7 @@ export default function ProfilePage({
     supabase
       .from("notes")
       .select("*")
+      .is("category_id", null)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) setNotes(data as Note[]);
@@ -196,6 +199,17 @@ export default function ProfilePage({
                   <path d="M7 2v2H5.5A2.5 2.5 0 0 0 3 6.5v13A2.5 2.5 0 0 0 5.5 22h13a2.5 2.5 0 0 0 2.5-2.5v-13A2.5 2.5 0 0 0 18.5 4H17V2h-2v2H9V2H7Zm-2 7h14v10.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V9Z" />
                 </svg>
                 Katıldı: {formatJoined(joinedAt)}
+              </div>
+
+              <div className="mt-3 flex items-center gap-4 text-[15px]">
+                <Link href="/profile/following" className="hover:underline">
+                  <span className="font-bold">{categories.length}</span>{" "}
+                  <span className="text-muted">Takip edilen</span>
+                </Link>
+                <Link href="/profile/followers" className="hover:underline">
+                  <span className="font-bold">{categories.length}</span>{" "}
+                  <span className="text-muted">Takipçi</span>
+                </Link>
               </div>
 
               <div className="mt-3 pb-3 border-b border-border" />

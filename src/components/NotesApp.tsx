@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Note } from "@/lib/types";
 import { useProfile } from "@/lib/useProfile";
+import { useCategories } from "@/lib/useCategories";
 import Sidebar from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import ComposeModal, { ComposeResult } from "./ComposeModal";
@@ -23,8 +24,25 @@ export default function NotesApp({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const { profile, avatarUrl: myAvatarUrl } = useProfile(userId, email);
+  const { categories, avatarUrls: categoryAvatarUrls } = useCategories(userId);
   const displayName = profile?.display_name ?? email.split("@")[0];
   const username = profile?.username ?? email.split("@")[0];
+
+  const identityFor = (note: Note) => {
+    if (note.category_id) {
+      const cat = categories.find((c) => c.id === note.category_id);
+      if (cat) {
+        return {
+          displayName: cat.display_name,
+          username: cat.username,
+          avatarUrl: cat.avatar_path ? categoryAvatarUrls[cat.avatar_path] ?? null : null,
+          profileHref: `/u/${cat.username}`,
+        };
+      }
+    }
+    return { displayName, username, avatarUrl: myAvatarUrl, profileHref: "/profile" };
+  };
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -207,18 +225,22 @@ export default function NotesApp({
               {query ? "Eşleşen not bulunamadı." : "Henüz not yok. Sağdaki / üstteki butonla ilk notunu yaz."}
             </div>
           ) : (
-            filtered.map((note) => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                displayName={displayName}
-                username={username}
-                avatarUrl={myAvatarUrl}
-                imageUrl={note.image_path ? imageUrls[note.image_path] ?? null : null}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-              />
-            ))
+            filtered.map((note) => {
+              const identity = identityFor(note);
+              return (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  displayName={identity.displayName}
+                  username={identity.username}
+                  avatarUrl={identity.avatarUrl}
+                  profileHref={identity.profileHref}
+                  imageUrl={note.image_path ? imageUrls[note.image_path] ?? null : null}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                />
+              );
+            })
           )}
         </main>
 
@@ -239,8 +261,8 @@ export default function NotesApp({
 
       {composeOpen && (
         <ComposeModal
-          displayName={displayName}
-          avatarUrl={myAvatarUrl}
+          displayName={editingNote ? identityFor(editingNote).displayName : displayName}
+          avatarUrl={editingNote ? identityFor(editingNote).avatarUrl : myAvatarUrl}
           editingNote={editingNote}
           existingImageUrl={
             editingNote?.image_path ? imageUrls[editingNote.image_path] ?? null : null
