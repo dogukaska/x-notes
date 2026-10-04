@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Note } from "@/lib/types";
-import { formatRelativeTime } from "@/lib/formatTime";
+import { formatFullDate } from "@/lib/formatTime";
 
 export default function NoteCard({
   note,
@@ -47,8 +47,8 @@ export default function NoteCard({
             <span className="font-bold truncate">{displayName}</span>
           )}
           <span className="text-muted truncate">@{username}</span>
-          <span className="text-muted">
-            · {formatRelativeTime(note.created_at)}
+          <span className="text-muted whitespace-nowrap shrink-0">
+            · {formatFullDate(note.created_at)}
             {edited && " · düzenlendi"}
           </span>
           {(onEdit || onDelete) && (
