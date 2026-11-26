@@ -780,7 +780,7 @@ function renderTheme() {
   try { preference = localStorage.getItem("tema") ?? preference; } catch {}
   const theme = preference === "light" || preference === "dark" ? preference : preferredTheme.matches ? "dark" : "light";
   document.documentElement.dataset.theme = theme;
-  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#171d1a" : "#f8faf8";
+  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#000000" : "#ffffff";
   $("theme-label").textContent = theme === "light" ? "Koyu tema" : "Açık tema";
   $("theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
   $("mobile-theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
