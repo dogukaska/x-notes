@@ -14,6 +14,8 @@ python3 -m http.server 8000 --directory docs
 
 Tarayıcıda `http://localhost:8000/` adresini aç. Harici bağımlılık ve derleme adımı yoktur.
 
+Projenin geliştirilmesi, düzenlenmesi ve test edilmesinde OpenAI Codex ve Claude’dan destek alındı.
+
 ## Yayın
 
 Canlı site https://dogukaska.github.io/x-notes/ adresindedir ve Dijital Çakı'nın Pages deposundaki `/x-notes/` dizininden sunulur. Kaynak bu depodaki `docs/` dizinidir.
