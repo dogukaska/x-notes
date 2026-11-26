@@ -246,7 +246,7 @@ dialog::backdrop { background: #000000b3; }
 .editor-link:hover { background: var(--hover); }
 #note-dialog[open] { overflow: hidden; }
 #note-dialog #note-form {
-  display: flex; flex-direction: column; min-height: 300px; max-height: inherit;
+  display: flex; flex-direction: column; min-height: min(300px, calc(100dvh - 24px)); max-height: inherit;
 }
 #note-dialog .editor-header h2 {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;

@@ -1,4 +1,4 @@
-import { readAll, readDrafts, write } from "./store.js?v=2";
+import { readAll, readDrafts, write } from "./store.js?v=3";
 
 const $ = (id) => document.getElementById(id);
 const icons = {
@@ -65,7 +65,10 @@ let autoHandle = false;
 let editingNote = null;
 let replyParent = null;
 let savingEditor = false;
+let savingQuick = false;
 let activeDraftId = null;
+let pendingDraftWrite = null;
+const draftImageIds = new WeakMap();
 const noteEditor = $("note-form");
 let quickUploads = [];
 let noteUploads = [];
@@ -146,7 +149,6 @@ function navigate(view, id = "") {
 }
 
 function applyRoute() {
-  if (replyParent && !savingEditor) closeNoteEditor();
   route = readRoute();
   query = "";
   tag = "";
@@ -191,9 +193,9 @@ function toast(message, undo) {
   }, undo ? 9000 : 4200);
 }
 
-async function refresh() {
+async function refresh(onBlocked) {
   const version = ++refreshVersion;
-  const fresh = await readAll();
+  const fresh = await readAll(onBlocked);
   if (version !== refreshVersion) return;
   notes = new Map(fresh.notes.map((note) => [note.id, note]));
   profiles = new Map([[selfId, defaultProfile], ...fresh.profiles.map((profile) => [profile.id, profile])]);
@@ -213,7 +215,7 @@ async function refresh() {
 async function persist(name, apply, related) {
   await write(name, apply, related);
   channel?.postMessage("changed");
-  await refresh();
+  await refresh().catch(fail);
 }
 
 function identityLink(profile) {
@@ -324,6 +326,7 @@ function renderTags() {
     if (note.deleted) continue;
     for (const value of note.tags) tags.add(value);
   }
+  if (tag && !tags.has(tag)) tag = "";
   const sorted = [...tags].sort((a, b) => a.localeCompare(b, "tr"));
   $("tag-list").replaceChildren(...(sorted.length
     ? sorted.map(makeChip) : [node("p", null, "Bir nota etiket eklediğinde burada görünür.")]));
@@ -411,10 +414,7 @@ function renderFeed() {
     }
     $("feed").append(empty);
   }
-  if (replyParent) {
-    if (mountReplyEditor()) activeInput?.focus({ preventScroll: true });
-    else if (!savingEditor) closeNoteEditor();
-  }
+  if (replyParent && mountReplyEditor()) activeInput?.focus({ preventScroll: true });
   cleanImages();
 }
 
@@ -543,7 +543,7 @@ const forms = {
 
 function updateSave(prefix) {
   const { text, images: attachments } = forms[prefix];
-  $(prefix + "-save").disabled = (prefix === "note" && savingEditor) || (!text.value.trim() && !attachments.length);
+  $(prefix + "-save").disabled = (prefix === "note" ? savingEditor : savingQuick) || (!text.value.trim() && !attachments.length);
 }
 
 function renderUploads(prefix) {
@@ -612,12 +612,21 @@ function setNoteTagsVisible(visible) {
   $("note-tag").setAttribute("aria-expanded", String(visible));
 }
 
+function savedDraftImageIds(draft) {
+  return draft.imageIds ?? draft.images.map((_, index) => draft.id + ":" + index);
+}
+
 function currentDraft() {
+  const imageIds = noteUploads.map((image) => {
+    if (!draftImageIds.has(image)) draftImageIds.set(image, crypto.randomUUID());
+    return draftImageIds.get(image);
+  });
   return {
     id: activeDraftId,
     content: $("note-text").value,
     tags: $("note-tags").value,
     images: [...noteUploads],
+    imageIds,
     authorId: $("note-category").value,
     updatedAt: Date.now(),
   };
@@ -635,8 +644,8 @@ function clearDraftRecovery(id, snapshot) {
 }
 
 async function storeDraft(draft) {
-  const { images: attachments, ...fields } = draft;
-  const snapshot = JSON.stringify({ ...fields, imageCount: attachments.length });
+  const { images, ...fields } = draft;
+  const snapshot = JSON.stringify(fields);
   try { localStorage.setItem(draftRecoveryPrefix + draft.id, snapshot); } catch {}
   await write("drafts", (store, transaction) => {
     if (!hasDraftContent(draft)) {
@@ -668,8 +677,20 @@ async function availableDrafts() {
     }
     const stored = drafts.get(snapshot.id);
     if (stored && stored.updatedAt > snapshot.updatedAt) continue;
-    const { imageCount, ...fields } = snapshot;
-    const draft = { ...fields, images: stored?.images.slice(0, imageCount) ?? [] };
+    const { imageCount, imageIds, ...fields } = snapshot;
+    const storedImages = stored?.images ?? [];
+    const storedIds = stored && savedDraftImageIds(stored);
+    let images = storedImages;
+    let recoveredIds = storedIds;
+    if (Array.isArray(imageIds) && storedIds) {
+      const imagesById = new Map(storedIds.map((id, index) => [id, storedImages[index]]));
+      recoveredIds = imageIds.filter((id) => imagesById.has(id));
+      images = recoveredIds.map((id) => imagesById.get(id));
+    } else if (imageIds?.length === 0 || imageCount === 0) {
+      images = [];
+      recoveredIds = [];
+    }
+    const draft = { ...fields, images, imageIds: recoveredIds };
     if (hasDraftContent(draft)) drafts.set(draft.id, draft);
     else drafts.delete(draft.id);
   }
@@ -679,7 +700,7 @@ async function availableDrafts() {
 function autosaveDraft() {
   if (!activeDraftId || savingEditor) return;
   const draft = currentDraft();
-  storeDraft(draft).catch((error) => {
+  pendingDraftWrite = storeDraft(draft).catch((error) => {
     if (activeDraftId === draft.id) fail(error, "note-error");
   });
 }
@@ -723,7 +744,7 @@ async function openDraftList() {
   list.replaceChildren(node("p", null, "Taslaklar yükleniyor…"));
   $("drafts-dialog").showModal();
   try {
-    if (activeDraftId) await storeDraft(currentDraft());
+    await pendingDraftWrite;
     const drafts = await availableDrafts();
     const items = drafts.map((draft) => {
       const preview = draft.content.trim() || draft.tags.trim() || (draft.images.length + " görsel");
@@ -766,6 +787,7 @@ function closeNoteEditor({ restoreFocus = false } = {}) {
   editingNote = null;
   replyParent = null;
   activeDraftId = null;
+  pendingDraftWrite = null;
   $("note-identities").open = false;
   noteUploads = [];
   renderUploads("note");
@@ -778,10 +800,14 @@ function openNoteEditor({ note = null, parent = null, draft = null } = {}) {
     $("note-text").focus();
     return;
   }
-  if (replyParent) closeNoteEditor();
+  if (replyParent) {
+    if (hasDraftContent(currentDraft()) && !window.confirm("Kaydedilmemiş yanıt silinsin mi?")) return;
+    closeNoteEditor();
+  }
   editingNote = note;
   replyParent = parent;
   activeDraftId = note || parent ? null : (draft?.id ?? crypto.randomUUID());
+  pendingDraftWrite = null;
   $("show-drafts").hidden = Boolean(note || parent);
   $("note-identities").open = false;
   $("note-dialog-title").textContent = note ? "Notu düzenle" : parent ? "Yanıt yaz" : "Yeni not";
@@ -793,6 +819,10 @@ function openNoteEditor({ note = null, parent = null, draft = null } = {}) {
   setNoteTagsVisible(Boolean($("note-tags").value));
   $("note-error").hidden = true;
   noteUploads = [...(draft?.images ?? note?.images ?? [])];
+  if (draft) {
+    const ids = savedDraftImageIds(draft);
+    noteUploads.forEach((image, index) => draftImageIds.set(image, ids[index]));
+  }
   const selected = draft?.authorId ?? note?.authorId ?? (route.view === "category" ? currentProfile().id : $("quick-category").value);
   renderCategoryOptions($("note-category"), selected);
   renderUploads("note");
@@ -815,6 +845,7 @@ async function saveNote(event, prefix) {
   const { images: attachments, text } = forms[prefix];
   const content = text.value.trim();
   if (!content && !attachments.length) return;
+  const originalRoute = route;
   const editing = prefix === "note" ? editingNote : null;
   const draftId = prefix === "note" ? activeDraftId : null;
   const parentId = prefix === "note" ? (replyParent?.id ?? editing?.parentId ?? null) : null;
@@ -825,16 +856,21 @@ async function saveNote(event, prefix) {
     authorId: $(prefix + "-category").value,
   };
   const save = $(prefix + "-save");
-  if (save.disabled || (prefix === "note" && savingEditor)) return;
+  if (save.disabled || (prefix === "note" ? savingEditor : savingQuick)) return;
   save.disabled = true;
-  if (prefix === "note") {
-    savingEditor = true;
-    noteEditor.inert = true;
-  }
+  const form = event.currentTarget;
+  form.inert = true;
+  if (prefix === "note") savingEditor = true;
+  else savingQuick = true;
   $(prefix + "-error").hidden = true;
   try {
     if (editing) {
-      await changeNote(editing.id, (current) => ({ ...current, ...changes, editedAt: Date.now() }));
+      await changeNote(editing.id, (current) => {
+        if ((current.editRevision ?? current.editedAt) !== (editing.editRevision ?? editing.editedAt)) {
+          throw new Error("Bu not başka bir sekmede değiştirildi. Son sürümü açıp tekrar düzenle.");
+        }
+        return { ...current, ...changes, editedAt: Date.now(), editRevision: crypto.randomUUID() };
+      });
     } else {
       const newNote = { id: draftId ?? crypto.randomUUID(), ...changes, parentId, createdAt: Date.now(), pinned: false, saved: false };
       await persist("notes", (store, transaction) => {
@@ -851,7 +887,7 @@ async function saveNote(event, prefix) {
       renderIdentity();
       renderUploads("quick");
     }
-    if (parentId && !editing && notes.has(parentId) && route.view !== "thread" &&
+    if (parentId && !editing && route === originalRoute && notes.has(parentId) && route.view !== "thread" &&
         (route.view !== "notes" || filter !== "all" || tag || query.trim())) {
       openThread(notes.get(parentId));
     }
@@ -859,31 +895,37 @@ async function saveNote(event, prefix) {
   } catch (error) {
     fail(error, prefix + "-error");
   } finally {
-    if (prefix === "note") {
-      savingEditor = false;
-      noteEditor.inert = false;
-    }
+    form.inert = false;
+    if (prefix === "note") savingEditor = false;
+    else savingQuick = false;
     updateSave(prefix);
   }
 }
 
-function changeNote(id, apply, allowDeleted = false) {
-  return persist("notes", (store, transaction) => {
-    const request = store.get(id);
-    request.onsuccess = () => {
-      const current = request.result;
-      if (!current || (current.deleted && !allowDeleted)) {
-        transaction.abort();
-        return;
-      }
-      store.put(apply(current));
-    };
-  });
+async function changeNote(id, apply, allowDeleted = false) {
+  let failure;
+  try {
+    await persist("notes", (store, transaction) => {
+      const request = store.get(id);
+      request.onsuccess = () => {
+        try {
+          const current = request.result;
+          if (!current || (current.deleted && !allowDeleted)) throw new Error("Bu not artık kullanılamıyor.");
+          store.put(apply(current));
+        } catch (error) {
+          failure = error;
+          transaction.abort();
+        }
+      };
+    });
+  } catch (error) {
+    throw failure ?? error;
+  }
 }
 
 async function toggleNote(note, property) {
   try {
-    await changeNote(note.id, (current) => ({ ...current, [property]: !current[property] }));
+    await changeNote(note.id, (current) => ({ ...current, [property]: !note[property] }));
   } catch (error) {
     fail(error);
   }
@@ -891,12 +933,16 @@ async function toggleNote(note, property) {
 
 async function deleteNote(note) {
   let removed;
+  const deletionId = crypto.randomUUID();
   try {
     await changeNote(note.id, (current) => {
       removed = current;
-      return { id: current.id, parentId: current.parentId, authorId: current.authorId, createdAt: current.createdAt, deleted: true };
+      return { id: current.id, parentId: current.parentId, authorId: current.authorId, createdAt: current.createdAt, deleted: true, deletionId };
     });
-    toast("Not silindi.", () => changeNote(note.id, () => removed, true));
+    toast("Not silindi.", () => changeNote(note.id, (current) => {
+      if (current.deletionId !== deletionId) throw new Error("Bu silme işlemi artık geri alınamıyor.");
+      return removed;
+    }, true));
   } catch (error) {
     fail(error);
   }
@@ -955,14 +1001,15 @@ async function saveProfile(event) {
     fail(new Error("Bir profil adı gir. Kullanıcı adında harf, sayı ve alt çizgi kullanabilirsin."), "profile-error");
     return;
   }
+  const original = editingProfile;
   const profile = {
-    id: editingProfile?.id ?? crypto.randomUUID(),
+    id: original?.id ?? crypto.randomUUID(),
     name, handle, photo, banner, bio: $("profile-description").value.trim(),
   };
-  const save = $("profile-form").querySelector('button[type="submit"]');
-  if (save.disabled) return;
-  save.disabled = true;
-  let duplicate = false;
+  const form = $("profile-form");
+  if (form.inert) return;
+  form.inert = true;
+  let failure;
   try {
     await persist("profiles", (store, transaction) => {
       const request = store.getAll();
@@ -970,22 +1017,27 @@ async function saveProfile(event) {
         const existing = request.result;
         const saved = existing.find((item) => item.id === profile.id);
         if (!existing.some((item) => item.id === selfId)) existing.push(defaultProfile);
-        duplicate = existing.some((item) => item.id !== profile.id && normalize(item.handle) === normalize(handle));
-        if (duplicate) transaction.abort();
-        else {
-          if (saved) profile.createdAt = saved.createdAt;
-          else profile.createdAt = Date.now();
-          store.put(profile);
+        if (saved?.editRevision !== original?.editRevision) {
+          failure = new Error("Bu profil başka bir sekmede değiştirildi. Son sürümü açıp tekrar düzenle.");
+        } else if (existing.some((item) => item.id !== profile.id && normalize(item.handle) === normalize(handle))) {
+          failure = new Error("Bu kullanıcı adı zaten kullanılıyor.");
         }
+        if (failure) {
+          transaction.abort();
+          return;
+        }
+        profile.createdAt = saved ? saved.createdAt : Date.now();
+        profile.editRevision = crypto.randomUUID();
+        store.put(profile);
       };
     });
     $("profile-dialog").close();
     openProfile(profile.id);
-    toast(editingProfile ? "Profil kaydedildi." : "Kategori eklendi.");
+    toast(original ? "Profil kaydedildi." : "Kategori eklendi.");
   } catch (error) {
-    fail(duplicate ? new Error("Bu kullanıcı adı zaten kullanılıyor.") : error, "profile-error");
+    fail(failure ?? error, "profile-error");
   } finally {
-    save.disabled = false;
+    form.inert = false;
   }
 }
 
@@ -1036,10 +1088,6 @@ $("note-tag").addEventListener("click", () => {
   setNoteTagsVisible(show);
   if (show) $("note-tags").focus();
 });
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) autosaveDraft();
-});
-window.addEventListener("pagehide", autosaveDraft);
 const viewport = window.visualViewport;
 if (viewport) {
   const updateEditorViewport = () => {
@@ -1066,6 +1114,9 @@ $("note-dialog").addEventListener("cancel", (event) => {
   } else {
     requestEditorClose();
   }
+});
+$("profile-dialog").addEventListener("cancel", (event) => {
+  if ($("profile-form").inert) event.preventDefault();
 });
 $("draft-confirm").addEventListener("cancel", (event) => {
   if (savingEditor) event.preventDefault();
@@ -1143,7 +1194,10 @@ window.addEventListener("pageshow", (event) => {
 });
 channel?.addEventListener("message", () => refresh().catch(fail));
 route = readRoute();
-refresh().catch((error) => {
+refresh(() => {
+  $("feed").replaceChildren(node("p", "loading", "Güncellemeyi tamamlamak için X Notes’un diğer sekmelerini kapat."));
+  $("feed").setAttribute("aria-busy", "false");
+}).catch((error) => {
   $("feed").replaceChildren(node("p", "form-error", "Tarayıcı depolaması açılamadı. Bu tarayıcıda site depolamasına izin verip sayfayı yenile."));
   fail(error);
 }).finally(() => $("feed").setAttribute("aria-busy", "false"));
