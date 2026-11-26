@@ -6,16 +6,6 @@ Notlar, yanıtlar, kategoriler ve profil görselleri IndexedDB'de saklanır. Far
 
 Her kategori kendi profilidir. Not oluştururken veya düzenlerken bir kimlik seçilebilir. Farklı profillerin not ve yanıtları tek bir konuşmada durabilir. Ana profilin takip listeleri kategori profillerini gösterir.
 
-## Geliştirme
-
-```sh
-python3 -m http.server 8000 --directory docs
-```
-
-Tarayıcıda `http://localhost:8000/` adresini aç. Harici bağımlılık ve derleme adımı yoktur.
-
 Projenin geliştirilmesi, düzenlenmesi ve test edilmesinde OpenAI Codex ve Claude’dan destek alındı.
 
-## Yayın
-
-Canlı site https://dogukaska.github.io/x-notes/ adresindedir ve Dijital Çakı'nın Pages deposundaki `/x-notes/` dizininden sunulur. Kaynak bu depodaki `docs/` dizinidir.
+[X Notes’u aç](https://dogukaska.github.io/x-notes/)
