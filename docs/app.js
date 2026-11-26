@@ -266,6 +266,9 @@ function render() {
   $("page-title").textContent = inProfile ? shown.name : title;
   $("page-description").textContent = inProfile ? noteTotal + " not" : description;
   $("page-description").hidden = !inProfile && !description;
+  const feedHeader = $("feed-header");
+  const feedAnchor = view === "notes" ? $("composer") : $("filter-summary");
+  if (feedHeader.nextElementSibling !== feedAnchor) feedAnchor.before(feedHeader);
   $("composer").hidden = view !== "notes";
   $("profile").hidden = !inProfile;
   const connectionView = view === "following" || view === "followers";
@@ -418,6 +421,8 @@ function noteCard(note) {
   }
 
   const author = profileFor(note.authorId);
+  const body = node("div", "note-body");
+  article.append(fillAvatar(node("span", "avatar"), author), body);
   const header = node("header", "note-header");
   const identity = node("div", "note-identity");
   identity.append(identityLink(author));
@@ -426,17 +431,17 @@ function noteCard(note) {
   time.dateTime = new Date(note.createdAt).toISOString();
   date.append(time);
   if (note.editedAt) date.append(node("span", "edited-label", "Düzenlendi"));
-  header.append(fillAvatar(node("span", "avatar"), author), identity, date);
-  article.append(header);
+  header.append(identity, date);
+  body.append(header);
 
   if (note.parentId && notes.has(note.parentId)) {
     const parent = notes.get(note.parentId);
     const parentName = "@" + profileFor(parent.authorId).handle;
     const context = node("p", "reply-to");
     context.append(button(parentName + " adlı profile yanıt", "identity-link", () => openThread(parent)));
-    article.append(context);
+    body.append(context);
   }
-  if (note.content) article.append(node("p", "note-text", note.content));
+  if (note.content) body.append(node("p", "note-text", note.content));
   if (note.images.length) {
     const attachmentList = node("div", "attachments");
     for (const image of note.images) {
@@ -449,12 +454,12 @@ function noteCard(note) {
       figure.append(show);
       attachmentList.append(figure);
     }
-    article.append(attachmentList);
+    body.append(attachmentList);
   }
   if (note.tags.length) {
     const labels = node("div", "note-tags");
     labels.append(...note.tags.map(makeChip));
-    article.append(labels);
+    body.append(labels);
   }
 
   const actions = node("div", "note-actions");
@@ -487,7 +492,7 @@ function noteCard(note) {
   menuItems.append(edit, remove);
   menu.append(trigger, menuItems);
   actions.append(menu);
-  article.append(actions);
+  body.append(actions);
   return article;
 }
 
@@ -561,7 +566,7 @@ function mountReplyEditor() {
   const article = $("note-" + replyParent.id);
   const trigger = article?.querySelector(".reply-action");
   if (!trigger) return false;
-  article.append(noteEditor);
+  article.querySelector(".note-body").append(noteEditor);
   trigger.setAttribute("aria-expanded", "true");
   return true;
 }
