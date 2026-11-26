@@ -1,19 +1,17 @@
-# Notlar
+# x-notes
 
-X (Twitter) arayüzüne benzeyen, kişisel not defteri. Next.js + Supabase.
+Metin ve görseller için tarayıcıda çalışan kişisel bir not defteri. Notlar, yanıtlar, kategoriler ve profil görselleri IndexedDB'de saklanır. Farklı tarayıcı profilleri ve cihazlar kendi kayıtlarını tutar. Tarayıcıdan site verileri silindiğinde kayıtlar da silinir.
 
-## Kurulum
+Her kategori kendi profilidir. Not oluştururken veya düzenlerken bir kimlik seçilebilir. Farklı profillerin not ve yanıtları tek bir konuşmada durabilir. Ana profilin takip listeleri kategori profillerini gösterir.
 
-1. `.env.local.example` dosyasını `.env.local` olarak kopyala ve Supabase proje bilgilerini gir:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=...
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-   ```
-2. `supabase/schema.sql` dosyasını Supabase Dashboard > SQL Editor'de çalıştır.
-3. Supabase Dashboard > Authentication > Users'dan kendine bir kullanıcı oluştur (email + şifre). Authentication > Sign In / Providers'da "Allow new users to sign up" kapalı tutulabilir, çünkü bu tek kullanıcılı bir uygulama.
-4. `npm install`
-5. `npm run dev`
+## Geliştirme
 
-## Dağıtım
+```sh
+python3 -m http.server 8000 --directory docs
+```
 
-Vercel'e bağlanıp yukarıdaki iki ortam değişkenini Vercel proje ayarlarına ekleyerek deploy edilir.
+Tarayıcıda `http://localhost:8000/` adresini aç. Harici bağımlılık ve derleme adımı yoktur.
+
+## Yayın
+
+GitHub Pages kaynağı `master` dalındaki `/docs` dizinidir. Site adresi https://dogukaska.github.io/x-notes/.

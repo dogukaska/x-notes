@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121715">
+  <meta name="description" content="Notların, görsellerin ve fikirlerin için tarayıcında yaşayan kişisel bir alan.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>x-notes · Kişisel not defteri</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./app.css">
+  <script src="./app.js" type="module"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <a class="brand" href="./" aria-label="x-notes ana sayfa"><img src="./icon.svg" alt="" width="39" height="39"><span>x-notes</span></a>
+      <nav class="nav" aria-label="Çalışma alanı">
+        <button type="button" class="nav-item" data-view="notes"><span data-icon="grid"></span> Notlar</button>
+        <button type="button" class="nav-item" data-view="saved"><span data-icon="bookmark"></span> Yer imleri</button>
+        <button type="button" class="nav-item" data-view="profile"><span data-icon="user"></span> Profil</button>
+      </nav>
+      <button class="button primary rail-compose" type="button" data-compose><span data-icon="plus"></span> Yeni not</button>
+      <div class="rail-bottom">
+        <button class="nav-item theme-button" type="button" id="theme"><span data-icon="sun"></span><span id="theme-label">Açık tema</span></button>
+        <button class="account" type="button" data-view="profile"><span class="avatar" data-avatar>BN</span><span><strong data-name>Benim notlarım</strong><small data-handle>@ben</small></span><span class="account-icon" data-icon="settings"></span></button>
+      </div>
+    </aside>
+
+    <main id="main">
+      <header class="mobile-header"><a class="brand" href="./"><img src="./icon.svg" alt="" width="32" height="32"><span>x-notes</span></a><button class="icon-button" type="button" id="mobile-theme" aria-label="Temayı değiştir"><span data-icon="sun"></span></button></header>
+      <header class="page-header">
+        <div><h1 id="page-title">Notlar</h1><p id="page-description">Kendine ait bir zaman akışı.</p></div>
+        <button class="button primary mobile-compose" type="button" data-compose><span data-icon="plus"></span> Yeni not</button>
+      </header>
+
+      <form id="composer" class="composer" autocomplete="off">
+        <div class="composer-top"><span class="avatar" data-avatar>BN</span><textarea id="quick-text" aria-label="Not metni" placeholder="Aklından ne geçiyor?" rows="3"></textarea></div>
+        <div class="identity-select"><label for="quick-category">Kimlik</label><select id="quick-category"></select></div>
+        <p class="form-error" id="quick-error" role="alert" hidden></p>
+        <div id="quick-attachments" class="attachments" hidden></div>
+        <div class="composer-footer">
+          <div class="tools">
+            <button class="icon-button" id="quick-upload" type="button" aria-label="Görsel ekle" title="Görsel ekle"><span data-icon="image"></span></button>
+            <input id="quick-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" multiple hidden>
+            <button class="icon-button" id="quick-tag" type="button" aria-label="Etiket ekle" title="Etiket ekle"><span data-icon="tag"></span></button>
+            <input id="quick-tags" class="tags-input" aria-label="Etiketler, virgülle ayır" placeholder="Etiketler" maxlength="200" hidden>
+          </div>
+          <button type="submit" class="button primary" id="quick-save" disabled>Notu kaydet</button>
+        </div>
+      </form>
+
+      <section id="profile" class="profile" hidden>
+        <div class="profile-cover" id="profile-cover"></div>
+        <div class="profile-content">
+          <span class="avatar profile-avatar" data-avatar>BN</span>
+          <button class="button secondary" id="edit-profile" type="button">Profili düzenle</button>
+          <h2 data-name>Benim notlarım</h2><p data-handle>@ben</p><p id="profile-bio" hidden></p>
+          <div class="profile-links" id="profile-links"><button type="button" id="following"></button><button type="button" id="followers"></button></div>
+        </div>
+      </section>
+
+      <button class="button secondary back-button" id="back-to-profile" type="button" hidden>Profile dön</button>
+      <section id="connections" class="panel connections" hidden></section>
+      <div class="feed-header" id="feed-header">
+        <button class="button secondary back-button" id="back-to-notes" type="button" hidden>Notlara dön</button>
+        <div class="filters" aria-label="Not filtreleri">
+          <button class="filter" type="button" data-filter="all" aria-pressed="true">Tümü</button>
+          <button class="filter" type="button" data-filter="pinned" aria-pressed="false">Sabitlenenler</button>
+        </div>
+        <span id="note-count" class="note-count"></span>
+      </div>
+      <p id="filter-summary" class="filter-summary" hidden></p>
+      <section id="feed" class="feed" aria-label="Not akışı" aria-busy="true"><p class="loading">Notlar yükleniyor…</p></section>
+    </main>
+
+    <aside class="context">
+      <div class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="Notlarda ara" aria-label="Notlarda ara"></div>
+      <section class="panel">
+        <div class="panel-heading"><h2><span data-icon="users"></span> Kategoriler</h2><button class="icon-button" type="button" data-new-category aria-label="Yeni kategori" title="Yeni kategori"><span data-icon="plus"></span></button></div>
+        <div id="category-list" class="category-list"></div>
+      </section>
+      <section class="panel tag-panel">
+        <h2><span data-icon="tag"></span> Etiketler</h2>
+        <div id="tag-list" class="tag-list"><p>Bir nota etiket eklediğinde burada görünür.</p></div>
+      </section>
+      <section class="privacy">
+        <span class="privacy-icon" data-icon="lock"></span>
+        <div><h2>Bu tarayıcıya özel</h2><p>Notların ve görsellerin bu tarayıcıda saklanır. Hesap ve senkronizasyon yok.</p></div>
+      </section>
+    </aside>
+  </div>
+
+  <dialog id="note-dialog" aria-labelledby="note-dialog-title">
+    <form id="note-form" autocomplete="off">
+      <div class="dialog-header"><h2 id="note-dialog-title">Yeni not</h2><button class="icon-button" type="button" data-close aria-label="Kapat"><span data-icon="close"></span></button></div>
+      <div class="dialog-body">
+        <div class="reply-context" id="reply-context" hidden></div>
+        <label for="note-category">Kimlik</label><select id="note-category"></select>
+        <label for="note-text">Not</label>
+        <textarea id="note-text" placeholder="Aklından ne geçiyor?" rows="5" autofocus></textarea>
+        <label for="note-tags">Etiketler</label>
+        <input id="note-tags" maxlength="200" placeholder="Örnek: fikir, iş">
+        <div id="note-attachments" class="attachments" hidden></div>
+        <button class="button secondary upload-button" id="note-upload" type="button"><span data-icon="image"></span> Görsel ekle</button>
+        <p class="form-error" id="note-error" role="alert" hidden></p>
+        <input id="note-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" multiple hidden>
+      </div>
+      <div class="dialog-footer"><button class="button secondary" type="button" data-close>Vazgeç</button><button class="button primary" id="note-save" type="submit" disabled>Notu kaydet</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="profile-dialog" aria-labelledby="profile-dialog-title">
+    <form id="profile-form" autocomplete="off">
+      <div class="dialog-header"><h2 id="profile-dialog-title">Profili düzenle</h2><button class="icon-button" type="button" data-close aria-label="Kapat"><span data-icon="close"></span></button></div>
+      <div class="dialog-body">
+        <label for="profile-name">Görünen ad</label><input id="profile-name" required maxlength="40" autofocus>
+        <label for="profile-handle">Kullanıcı adı</label><input id="profile-handle" required maxlength="40" spellcheck="false" autocomplete="off">
+        <label for="profile-description">Biyografi</label><textarea id="profile-description" maxlength="160" rows="3"></textarea>
+        <div class="profile-media"><label for="profile-photo">Profil fotoğrafı</label><input id="profile-photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif"><button class="button secondary" id="clear-photo" type="button" hidden>Fotoğrafı kaldır</button></div>
+        <div class="profile-media"><label for="profile-banner">Kapak görseli</label><input id="profile-banner" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif"><button class="button secondary" id="clear-banner" type="button" hidden>Kapağı kaldır</button></div>
+        <p class="form-error" id="profile-error" role="alert" hidden></p>
+      </div>
+      <div class="dialog-footer"><button class="button secondary" type="button" data-close>Vazgeç</button><button class="button primary" type="submit">Kaydet</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="image-dialog" id="image-dialog" aria-label="Not görseli">
+    <button class="icon-button image-close" type="button" data-close aria-label="Kapat"><span data-icon="close"></span></button>
+    <img id="full-image" alt="Not görseli">
+  </dialog>
+
+  <div class="toast" id="toast" hidden><span id="toast-text" role="status"></span><button class="button toast-undo" type="button" id="undo" hidden>Geri al</button></div>
+</body>
+</html>
