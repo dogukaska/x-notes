@@ -10,8 +10,8 @@
   <link rel="icon" href="./icon.svg?v=4" type="image/svg+xml">
   <link rel="manifest" href="./manifest.webmanifest?v=5">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=4">
-  <link rel="stylesheet" href="./app.css?v=7">
-  <script src="./app.js?v=7" type="module"></script>
+  <link rel="stylesheet" href="./app.css?v=8">
+  <script src="./app.js?v=8" type="module"></script>
 </head>
 <body>
   <div class="shell">
@@ -31,10 +31,9 @@
 
     <main id="main">
       <header class="page-header">
+        <button class="icon-button mobile-profile" type="button" id="open-drawer" aria-label="Profil menüsünü aç" aria-controls="profile-drawer" aria-haspopup="dialog"><span class="avatar" data-avatar>BN</span></button>
         <a class="mobile-brand" href="./" aria-label="x-notes ana sayfa"><img src="./icon.svg?v=4" alt="" width="23" height="23"></a>
         <div class="page-heading"><h1 id="page-title">Anasayfa</h1><p id="page-description" hidden></p></div>
-        <a class="catalog-link mobile-catalog" href="/">Uygulamalar</a>
-        <button class="icon-button mobile-theme" type="button" id="mobile-theme" aria-label="Temayı değiştir"><span data-icon="sun"></span></button>
         <button class="icon-button compose-trigger" type="button" id="new-note" aria-label="Yeni not" title="Yeni not"><span data-icon="plus"></span></button>
       </header>
 
@@ -55,18 +54,25 @@
       </form>
 
       <section id="profile" class="profile" hidden>
-        <div class="profile-cover" id="profile-cover" aria-hidden="true"></div>
+        <div class="profile-banner">
+          <div class="profile-cover" id="profile-cover" aria-hidden="true"></div>
+          <button type="button" class="icon-button profile-back" id="profile-back" aria-label="Anasayfaya dön"><span data-icon="back"></span></button>
+        </div>
         <div class="profile-content">
           <span class="avatar profile-avatar" data-avatar>BN</span>
-          <button class="button secondary" id="edit-profile" type="button">Profili düzenle</button>
           <h2 data-name>Benim notlarım</h2><p class="profile-handle" data-handle>@ben</p><p id="profile-bio" hidden></p>
-          <div class="profile-links" id="profile-links"><button type="button" id="following"></button><button type="button" id="followers"></button><button type="button" id="new-category"><span data-icon="plus"></span> Kategori ekle</button></div>
+          <p class="profile-created" id="profile-created" hidden><span data-icon="calendar"></span><time id="profile-created-date"></time></p>
+          <div class="profile-links" id="profile-links"><button type="button" id="following"></button><button type="button" id="followers"></button></div>
+          <div class="profile-actions">
+            <button class="button secondary" id="edit-profile" type="button">Profili düzenle</button>
+            <button class="button secondary" id="new-category" type="button"><span data-icon="plus"></span> Kategori ekle</button>
+          </div>
         </div>
       </section>
 
       <button class="button secondary back-button" id="back-to-profile" type="button" hidden>Profile dön</button>
       <section id="connections" class="panel connections" hidden></section>
-      <div class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="Notlarda ara" aria-label="Notlarda ara"></div>
+      <div class="search" id="feed-search"><span data-icon="search"></span><input id="search" type="search" placeholder="Notlarda ara" aria-label="Notlarda ara"></div>
       <div class="feed-header" id="feed-header">
         <button class="button secondary back-button" id="back-to-notes" type="button" hidden>Notlara dön</button>
         <div class="filters" id="feed-filters" role="group" aria-label="Not filtreleri">
@@ -74,9 +80,9 @@
           <button class="filter" type="button" data-filter="pinned" aria-pressed="false">Sabitlenenler</button>
         </div>
         <div class="filters profile-filters" id="profile-filters" role="group" aria-label="Profilde göster" hidden>
-          <button class="filter" type="button" data-filter="all" aria-pressed="true">Notlar</button>
-          <button class="filter" type="button" data-filter="replies" aria-pressed="false">Yanıtlar</button>
-          <button class="filter" type="button" data-filter="media" aria-pressed="false">Görseller</button>
+          <button class="filter" type="button" data-filter="all" aria-pressed="true"><span data-icon="note"></span>Notlar</button>
+          <button class="filter" type="button" data-filter="replies" aria-pressed="false"><span data-icon="reply"></span>Yanıtlar</button>
+          <button class="filter" type="button" data-filter="media" aria-pressed="false"><span data-icon="image"></span>Medya</button>
         </div>
         <span id="note-count" class="note-count"></span>
       </div>
@@ -93,22 +99,66 @@
     </aside>
   </div>
 
+  <dialog id="profile-drawer" class="profile-drawer" aria-labelledby="drawer-name">
+    <div class="drawer-header">
+      <span class="avatar" data-avatar>BN</span>
+      <button class="icon-button" type="button" data-close aria-label="Menüyü kapat" autofocus><span data-icon="close"></span></button>
+    </div>
+    <strong id="drawer-name" data-name>Benim notlarım</strong>
+    <span class="drawer-handle" data-handle>@ben</span>
+    <nav class="drawer-nav" aria-label="Profil menüsü">
+      <button class="nav-item" type="button" data-view="profile"><span data-icon="user"></span>Profil</button>
+      <button class="nav-item" type="button" data-view="saved"><span data-icon="bookmark"></span>Yer imleri</button>
+      <button class="nav-item" type="button" id="drawer-drafts"><span data-icon="note"></span>Taslaklar</button>
+      <button class="nav-item" type="button" data-view="notes"><span data-icon="home"></span>Anasayfa</button>
+      <button class="nav-item" type="button" id="mobile-theme"><span data-icon="sun"></span><span id="mobile-theme-label">Açık tema</span></button>
+      <a class="nav-item" href="/"><span data-icon="apps"></span>Uygulamalar</a>
+    </nav>
+  </dialog>
+
   <dialog id="note-dialog" aria-labelledby="note-dialog-title">
     <form id="note-form" autocomplete="off">
-      <div class="dialog-header"><h2 id="note-dialog-title">Yeni not</h2><button class="icon-button" type="button" data-close aria-label="Kapat"><span data-icon="close"></span></button></div>
-      <div class="dialog-body">
-        <label for="note-category">Kimlik</label><select id="note-category"></select>
-        <label id="note-text-label" for="note-text">Not</label>
-        <textarea id="note-text" placeholder="Aklından ne geçiyor?" rows="5" autofocus></textarea>
-        <label for="note-tags">Etiketler</label>
-        <input id="note-tags" maxlength="200" placeholder="Örnek: fikir, iş">
+      <div class="dialog-header editor-header">
+        <h2 id="note-dialog-title">Yeni not</h2>
+        <button class="editor-link" type="button" data-close>Vazgeç</button>
+        <button class="editor-link" type="button" id="show-drafts">Taslaklar</button>
+        <button class="button primary" id="note-save" type="submit" disabled>Kaydet</button>
+      </div>
+      <div class="dialog-body editor-body">
+        <label class="inline-identity" for="note-category">Kimlik</label><select class="inline-identity" id="note-category"></select>
+        <div class="editor-writing">
+          <details id="note-identities" class="editor-identities">
+            <summary id="note-identity-trigger" aria-label="Not kategorisini seç"><span id="note-avatar" class="avatar">BN</span><span data-icon="chevron"></span></summary>
+            <div id="note-identity-list" class="editor-identity-list"></div>
+          </details>
+          <textarea id="note-text" aria-label="Not metni" placeholder="Aklından ne geçiyor?" rows="5" autofocus></textarea>
+        </div>
+        <input id="note-tags" aria-label="Etiketler, virgülle ayır" maxlength="200" placeholder="Etiketler" hidden>
         <div id="note-attachments" class="attachments" hidden></div>
-        <button class="button secondary upload-button" id="note-upload" type="button"><span data-icon="image"></span> Görsel ekle</button>
         <p class="form-error" id="note-error" role="alert" hidden></p>
         <input id="note-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" multiple hidden>
       </div>
-      <div class="dialog-footer"><button class="button secondary" type="button" data-close>Vazgeç</button><button class="button primary" id="note-save" type="submit" disabled>Kaydet</button></div>
+      <div class="dialog-footer editor-toolbar">
+        <button class="icon-button" id="note-upload" type="button" title="Görsel ekle" aria-label="Görsel ekle"><span data-icon="image"></span></button>
+        <button class="icon-button" id="note-tag" type="button" title="Etiket ekle" aria-label="Etiket ekle" aria-controls="note-tags" aria-expanded="false"><span data-icon="tag"></span></button>
+      </div>
     </form>
+  </dialog>
+
+  <dialog id="drafts-dialog" aria-labelledby="drafts-title">
+    <div class="dialog-header"><h2 id="drafts-title">Taslaklar</h2><button class="icon-button" type="button" data-close aria-label="Taslakları kapat" autofocus><span data-icon="close"></span></button></div>
+    <div id="draft-list" class="draft-list"></div>
+    <p class="form-error draft-error" id="draft-list-error" role="alert" hidden></p>
+  </dialog>
+
+  <dialog id="draft-confirm" aria-labelledby="draft-confirm-title">
+    <div class="dialog-header"><h2 id="draft-confirm-title">Taslak kaydedilsin mi?</h2></div>
+    <p class="form-error draft-error" id="draft-confirm-error" role="alert" hidden></p>
+    <div class="dialog-footer draft-confirm-actions">
+      <button class="button secondary" type="button" data-close autofocus>Yazmaya dön</button>
+      <button class="button secondary" type="button" id="discard-draft">Sil</button>
+      <button class="button primary" type="button" id="keep-draft">Taslağı kaydet</button>
+    </div>
   </dialog>
 
   <dialog id="profile-dialog" aria-labelledby="profile-dialog-title">

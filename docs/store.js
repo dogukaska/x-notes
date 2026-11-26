@@ -1,11 +1,15 @@
 const database = new Promise((resolve, reject) => {
-  const request = indexedDB.open("x-notes", 1);
+  const request = indexedDB.open("x-notes", 2);
   request.onupgradeneeded = () => {
-    for (const name of ["notes", "profiles"]) {
-      request.result.createObjectStore(name, { keyPath: "id" });
+    for (const name of ["notes", "profiles", "drafts"]) {
+      if (!request.result.objectStoreNames.contains(name)) request.result.createObjectStore(name, { keyPath: "id" });
     }
   };
-  request.onsuccess = () => resolve(request.result);
+  request.onsuccess = () => {
+    const db = request.result;
+    db.onversionchange = () => db.close();
+    resolve(db);
+  };
   request.onerror = () => reject(request.error);
   request.onblocked = () => reject(new Error("Veritabanı başka bir sekmede açık."));
 });
@@ -23,10 +27,20 @@ export async function readAll() {
   });
 }
 
-export async function write(name, apply) {
+export async function readDrafts() {
   const db = await database;
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(name, "readwrite");
+    const transaction = db.transaction("drafts", "readonly");
+    const drafts = transaction.objectStore("drafts").getAll();
+    transaction.oncomplete = () => resolve(drafts.result);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function write(name, apply, related = []) {
+  const db = await database;
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([name, ...related], "readwrite");
     const store = transaction.objectStore(name);
     transaction.oncomplete = () => resolve();
     transaction.onabort = () => reject(transaction.error);

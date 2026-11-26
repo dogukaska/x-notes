@@ -1,4 +1,4 @@
-import { readAll, write } from "./store.js";
+import { readAll, readDrafts, write } from "./store.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const icons = {
@@ -10,6 +10,10 @@ const icons = {
   moon: '<path d="M20 15A8 8 0 0 1 9 4a9 9 0 1 0 11 11Z"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="m10 3-1 3-3 1-3 3 2 2-1 4 4 1 2 4h4l1-3 3-1 3-3-2-2 1-4-4-1-2-4z"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-4 3 3 4-5 4 4"/>',
+  back: '<path d="m15 18-6-6 6-6"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18"/>',
+  apps: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
   tag: '<path d="M3 4h8l10 10-7 7L4 11z"/><circle cx="8" cy="8" r="1"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/>',
@@ -26,8 +30,10 @@ function icon(name) {
 for (const slot of document.querySelectorAll("[data-icon]")) slot.innerHTML = icon(slot.dataset.icon);
 
 const selfId = "self";
+const draftRecoveryPrefix = "x-notes:draft:";
 const defaultProfile = { id: selfId, name: "Benim notlarım", handle: "ben", bio: "", photo: null, banner: null };
 const dateFormat = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" });
+const profileDateFormat = new Intl.DateTimeFormat("tr-TR", { dateStyle: "long" });
 const preferredTheme = matchMedia("(prefers-color-scheme: dark)");
 let sessionTheme;
 const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel("x-notes") : null;
@@ -59,6 +65,7 @@ let autoHandle = false;
 let editingNote = null;
 let replyParent = null;
 let savingEditor = false;
+let activeDraftId = null;
 const noteEditor = $("note-form");
 let quickUploads = [];
 let noteUploads = [];
@@ -203,8 +210,8 @@ async function refresh() {
   render();
 }
 
-async function persist(name, apply) {
-  await write(name, apply);
+async function persist(name, apply, related) {
+  await write(name, apply, related);
   channel?.postMessage("changed");
   await refresh();
 }
@@ -245,7 +252,15 @@ function renderIdentity() {
   $("profile-bio").textContent = shown.bio;
   $("profile-bio").hidden = !shown.bio;
   $("profile-cover").replaceChildren(...(shown.banner ? [imageFor(shown.banner)] : []));
+  $("profile-created").hidden = !Number.isFinite(shown.createdAt);
+  if (!$("profile-created").hidden) {
+    const date = new Date(shown.createdAt);
+    const label = $("profile-created-date");
+    label.dateTime = date.toISOString();
+    label.textContent = profileDateFormat.format(date) + " tarihinde oluşturuldu";
+  }
   $("profile-links").hidden = shown.id !== selfId;
+  $("new-category").hidden = shown.id !== selfId;
   $("following").replaceChildren(node("strong", null, String(categories.length)), " Takip edilen");
   $("followers").replaceChildren(node("strong", null, String(categories.length)), " Takipçi");
 }
@@ -263,11 +278,12 @@ function render() {
   const shown = currentProfile();
   const noteTotal = inProfile ? [...notes.values()].filter((note) => !note.deleted && note.authorId === shown.id && !note.parentId).length : 0;
   $("main").dataset.view = view;
+  $("main").classList.toggle("profile-view", inProfile);
   $("page-title").textContent = inProfile ? shown.name : title;
   $("page-description").textContent = inProfile ? noteTotal + " not" : description;
   $("page-description").hidden = !inProfile && !description;
   const feedHeader = $("feed-header");
-  const feedAnchor = view === "notes" ? $("composer") : $("filter-summary");
+  const feedAnchor = view === "notes" ? $("composer") : inProfile ? $("feed-search") : $("filter-summary");
   if (feedHeader.nextElementSibling !== feedAnchor) feedAnchor.before(feedHeader);
   $("composer").hidden = view !== "notes";
   $("profile").hidden = !inProfile;
@@ -284,7 +300,10 @@ function render() {
     else nav.removeAttribute("aria-current");
   }
   renderCategoryOptions($("quick-category"));
-  if ($("note-dialog").open || replyParent) renderCategoryOptions($("note-category"));
+  if ($("note-dialog").open || replyParent) {
+    renderCategoryOptions($("note-category"));
+    if ($("note-dialog").open) renderNoteIdentity();
+  }
   renderIdentity();
   renderFeed();
 }
@@ -524,7 +543,7 @@ const forms = {
 
 function updateSave(prefix) {
   const { text, images: attachments } = forms[prefix];
-  $(prefix + "-save").disabled = !text.value.trim() && !attachments.length;
+  $(prefix + "-save").disabled = (prefix === "note" && savingEditor) || (!text.value.trim() && !attachments.length);
 }
 
 function renderUploads(prefix) {
@@ -537,6 +556,7 @@ function renderUploads(prefix) {
     figure.append(imageFor(blob, "Eklenecek görsel"), iconButton("Görseli kaldır", "close", () => {
       state.images.splice(index, 1);
       renderUploads(prefix);
+      if (prefix === "note") autosaveDraft();
     }));
     preview.append(figure);
   });
@@ -555,11 +575,177 @@ for (const prefix of Object.keys(forms)) {
       forms[prefix].images.push(...added);
       $(prefix + "-error").hidden = true;
       renderUploads(prefix);
+      if (prefix === "note") autosaveDraft();
     } catch (error) {
       fail(error, prefix + "-error");
     }
     input.value = "";
   });
+}
+
+function renderNoteIdentity() {
+  const select = $("note-category");
+  const selected = profileFor(select.value);
+  fillAvatar($("note-avatar"), selected);
+  $("note-identity-trigger").setAttribute("aria-label", "Not kategorisini seç. Seçili: " + selected.name);
+  const choices = [...select.options].map((option) => {
+    const profile = profileFor(option.value);
+    const choice = button(undefined, "category-link", () => {
+      select.value = profile.id;
+      $("note-identities").open = false;
+      renderNoteIdentity();
+      $("note-identity-trigger").focus();
+      autosaveDraft();
+    });
+    choice.setAttribute("aria-pressed", String(profile.id === selected.id));
+    const identity = node("span", "note-identity");
+    identity.append(node("strong", null, profile.name), node("small", null, "@" + profile.handle));
+    choice.append(fillAvatar(node("span", "avatar"), profile), identity);
+    return choice;
+  });
+  $("note-identity-list").replaceChildren(...choices);
+  cleanImages();
+}
+
+function setNoteTagsVisible(visible) {
+  $("note-tags").hidden = !visible;
+  $("note-tag").setAttribute("aria-expanded", String(visible));
+}
+
+function currentDraft() {
+  return {
+    id: activeDraftId,
+    content: $("note-text").value,
+    tags: $("note-tags").value,
+    images: [...noteUploads],
+    authorId: $("note-category").value,
+    updatedAt: Date.now(),
+  };
+}
+
+function hasDraftContent(draft) {
+  return Boolean(draft.content.trim() || draft.tags.trim() || draft.images.length);
+}
+
+function clearDraftRecovery(id, snapshot) {
+  try {
+    const key = draftRecoveryPrefix + id;
+    if (snapshot === undefined || localStorage.getItem(key) === snapshot) localStorage.removeItem(key);
+  } catch {}
+}
+
+async function storeDraft(draft) {
+  const { images: attachments, ...fields } = draft;
+  const snapshot = JSON.stringify({ ...fields, imageCount: attachments.length });
+  try { localStorage.setItem(draftRecoveryPrefix + draft.id, snapshot); } catch {}
+  await write("drafts", (store, transaction) => {
+    if (!hasDraftContent(draft)) {
+      store.delete(draft.id);
+      return;
+    }
+    const published = transaction.objectStore("notes").getKey(draft.id);
+    published.onsuccess = () => {
+      if (published.result === undefined) store.put(draft);
+    };
+  }, ["notes"]);
+  clearDraftRecovery(draft.id, snapshot);
+}
+
+async function availableDrafts() {
+  const recovery = [];
+  try {
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(draftRecoveryPrefix)) recovery.push(JSON.parse(localStorage.getItem(key)));
+    }
+  } catch {}
+  const drafts = new Map((await readDrafts()).map((draft) => [draft.id, draft]));
+  for (const snapshot of recovery) {
+    if (!snapshot?.id || typeof snapshot.content !== "string" || typeof snapshot.tags !== "string") continue;
+    if (notes.has(snapshot.id)) {
+      clearDraftRecovery(snapshot.id);
+      continue;
+    }
+    const stored = drafts.get(snapshot.id);
+    if (stored && stored.updatedAt > snapshot.updatedAt) continue;
+    const { imageCount, ...fields } = snapshot;
+    const draft = { ...fields, images: stored?.images.slice(0, imageCount) ?? [] };
+    if (hasDraftContent(draft)) drafts.set(draft.id, draft);
+    else drafts.delete(draft.id);
+  }
+  return [...drafts.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function autosaveDraft() {
+  if (!activeDraftId || savingEditor) return;
+  const draft = currentDraft();
+  storeDraft(draft).catch((error) => {
+    if (activeDraftId === draft.id) fail(error, "note-error");
+  });
+}
+
+function requestEditorClose() {
+  if (savingEditor) return;
+  if (activeDraftId && hasDraftContent(currentDraft())) {
+    $("draft-confirm-error").hidden = true;
+    $("draft-confirm").showModal();
+  } else {
+    closeNoteEditor({ restoreFocus: true });
+  }
+}
+
+async function finishDraft(keep) {
+  if (savingEditor || !activeDraftId) return;
+  savingEditor = true;
+  $("draft-confirm-error").hidden = true;
+  try {
+    if (keep) await storeDraft(currentDraft());
+    else {
+      await write("drafts", (store) => store.delete(activeDraftId));
+      clearDraftRecovery(activeDraftId);
+    }
+    $("draft-confirm").close();
+    closeNoteEditor();
+    if (keep) toast("Taslak kaydedildi.");
+  } catch (error) {
+    fail(error, "draft-confirm-error");
+  } finally {
+    savingEditor = false;
+    updateSave("note");
+  }
+}
+
+async function openDraftList() {
+  if (savingEditor || $("drafts-dialog").open) return;
+  savingEditor = true;
+  const list = $("draft-list");
+  $("draft-list-error").hidden = true;
+  list.replaceChildren(node("p", null, "Taslaklar yükleniyor…"));
+  $("drafts-dialog").showModal();
+  try {
+    if (activeDraftId) await storeDraft(currentDraft());
+    const drafts = await availableDrafts();
+    const items = drafts.map((draft) => {
+      const preview = draft.content.trim() || draft.tags.trim() || (draft.images.length + " görsel");
+      const item = button(undefined, "draft-entry", () => {
+        $("drafts-dialog").close();
+        $("profile-drawer").close();
+        openNoteEditor({ draft });
+      });
+      item.append(
+        node("strong", null, preview),
+        node("small", null, profileFor(draft.authorId).name + " · " + dateFormat.format(draft.updatedAt)),
+      );
+      return item;
+    });
+    list.replaceChildren(...(items.length ? items : [node("p", null, "Henüz taslak yok.")]));
+  } catch (error) {
+    list.replaceChildren();
+    fail(error, "draft-list-error");
+  } finally {
+    savingEditor = false;
+    updateSave("note");
+  }
 }
 
 function mountReplyEditor() {
@@ -579,12 +765,14 @@ function closeNoteEditor({ restoreFocus = false } = {}) {
   noteEditor.classList.remove("inline-reply");
   editingNote = null;
   replyParent = null;
+  activeDraftId = null;
+  $("note-identities").open = false;
   noteUploads = [];
   renderUploads("note");
   if (restoreFocus) trigger?.focus();
 }
 
-function openNoteEditor({ note = null, parent = null } = {}) {
+function openNoteEditor({ note = null, parent = null, draft = null } = {}) {
   if (savingEditor) return;
   if (replyParent && parent?.id === replyParent.id) {
     $("note-text").focus();
@@ -593,15 +781,19 @@ function openNoteEditor({ note = null, parent = null } = {}) {
   if (replyParent) closeNoteEditor();
   editingNote = note;
   replyParent = parent;
+  activeDraftId = note || parent ? null : (draft?.id ?? crypto.randomUUID());
+  $("show-drafts").hidden = Boolean(note || parent);
+  $("note-identities").open = false;
   $("note-dialog-title").textContent = note ? "Notu düzenle" : parent ? "Yanıt yaz" : "Yeni not";
-  $("note-text-label").textContent = parent ? "Yanıt" : "Not";
+  $("note-text").setAttribute("aria-label", parent ? "Yanıt" : "Not metni");
   $("note-text").rows = parent ? 2 : 5;
   $("note-text").placeholder = parent ? "Yanıtını yaz" : "Aklından ne geçiyor?";
-  $("note-text").value = note?.content ?? "";
-  $("note-tags").value = note?.tags.join(", ") ?? "";
+  $("note-text").value = draft?.content ?? note?.content ?? "";
+  $("note-tags").value = draft?.tags ?? note?.tags.join(", ") ?? "";
+  setNoteTagsVisible(Boolean($("note-tags").value));
   $("note-error").hidden = true;
-  noteUploads = [...(note?.images ?? [])];
-  const selected = note?.authorId ?? (route.view === "category" ? currentProfile().id : $("quick-category").value);
+  noteUploads = [...(draft?.images ?? note?.images ?? [])];
+  const selected = draft?.authorId ?? note?.authorId ?? (route.view === "category" ? currentProfile().id : $("quick-category").value);
   renderCategoryOptions($("note-category"), selected);
   renderUploads("note");
   if (parent) {
@@ -612,7 +804,8 @@ function openNoteEditor({ note = null, parent = null } = {}) {
       return;
     }
   } else {
-    $("note-dialog").showModal();
+    renderNoteIdentity();
+    if (!$("note-dialog").open) $("note-dialog").showModal();
   }
   $("note-text").focus();
 }
@@ -623,6 +816,7 @@ async function saveNote(event, prefix) {
   const content = text.value.trim();
   if (!content && !attachments.length) return;
   const editing = prefix === "note" ? editingNote : null;
+  const draftId = prefix === "note" ? activeDraftId : null;
   const parentId = prefix === "note" ? (replyParent?.id ?? editing?.parentId ?? null) : null;
   const changes = {
     content,
@@ -633,14 +827,21 @@ async function saveNote(event, prefix) {
   const save = $(prefix + "-save");
   if (save.disabled || (prefix === "note" && savingEditor)) return;
   save.disabled = true;
-  if (prefix === "note") savingEditor = true;
+  if (prefix === "note") {
+    savingEditor = true;
+    noteEditor.inert = true;
+  }
   $(prefix + "-error").hidden = true;
   try {
     if (editing) {
       await changeNote(editing.id, (current) => ({ ...current, ...changes, editedAt: Date.now() }));
     } else {
-      const newNote = { id: crypto.randomUUID(), ...changes, parentId, createdAt: Date.now(), pinned: false, saved: false };
-      await persist("notes", (store) => store.add(newNote));
+      const newNote = { id: draftId ?? crypto.randomUUID(), ...changes, parentId, createdAt: Date.now(), pinned: false, saved: false };
+      await persist("notes", (store, transaction) => {
+        store.add(newNote);
+        if (draftId) transaction.objectStore("drafts").delete(draftId);
+      }, draftId ? ["drafts"] : []);
+      if (draftId) clearDraftRecovery(draftId);
     }
     if (prefix === "note") closeNoteEditor({ restoreFocus: Boolean(parentId) && !editing });
     else {
@@ -658,7 +859,10 @@ async function saveNote(event, prefix) {
   } catch (error) {
     fail(error, prefix + "-error");
   } finally {
-    if (prefix === "note") savingEditor = false;
+    if (prefix === "note") {
+      savingEditor = false;
+      noteEditor.inert = false;
+    }
     updateSave(prefix);
   }
 }
@@ -764,10 +968,15 @@ async function saveProfile(event) {
       const request = store.getAll();
       request.onsuccess = () => {
         const existing = request.result;
+        const saved = existing.find((item) => item.id === profile.id);
         if (!existing.some((item) => item.id === selfId)) existing.push(defaultProfile);
         duplicate = existing.some((item) => item.id !== profile.id && normalize(item.handle) === normalize(handle));
         if (duplicate) transaction.abort();
-        else store.put(profile);
+        else {
+          if (saved) profile.createdAt = saved.createdAt;
+          else profile.createdAt = Date.now();
+          store.put(profile);
+        }
       };
     });
     $("profile-dialog").close();
@@ -789,6 +998,7 @@ function renderTheme() {
   $("theme-label").textContent = theme === "light" ? "Koyu tema" : "Açık tema";
   $("theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
   $("mobile-theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
+  $("mobile-theme-label").textContent = $("theme-label").textContent;
 }
 
 function toggleTheme() {
@@ -803,23 +1013,68 @@ window.addEventListener("storage", (event) => {
 });
 renderTheme();
 
-for (const control of document.querySelectorAll("[data-view]")) control.addEventListener("click", () => navigate(control.dataset.view));
+for (const control of document.querySelectorAll("[data-view]")) {
+  control.addEventListener("click", () => {
+    if ($("profile-drawer").open) $("profile-drawer").close();
+    navigate(control.dataset.view);
+  });
+}
+$("open-drawer").addEventListener("click", () => $("profile-drawer").showModal());
+$("profile-drawer").addEventListener("click", (event) => {
+  if (event.target === $("profile-drawer")) {
+    const rect = $("profile-drawer").getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right) $("profile-drawer").close();
+  }
+});
+$("show-drafts").addEventListener("click", openDraftList);
+$("drawer-drafts").addEventListener("click", openDraftList);
+$("keep-draft").addEventListener("click", () => finishDraft(true));
+$("discard-draft").addEventListener("click", () => finishDraft(false));
+for (const field of ["note-text", "note-tags"]) $(field).addEventListener("input", autosaveDraft);
+$("note-tag").addEventListener("click", () => {
+  const show = $("note-tags").hidden;
+  setNoteTagsVisible(show);
+  if (show) $("note-tags").focus();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) autosaveDraft();
+});
+window.addEventListener("pagehide", autosaveDraft);
+const viewport = window.visualViewport;
+if (viewport) {
+  const updateEditorViewport = () => {
+    $("note-dialog").style.setProperty("--editor-height", viewport.height + "px");
+    $("note-dialog").style.setProperty("--editor-top", viewport.offsetTop + "px");
+  };
+  viewport.addEventListener("resize", updateEditorViewport);
+  viewport.addEventListener("scroll", updateEditorViewport);
+  updateEditorViewport();
+}
 $("new-note").addEventListener("click", () => openNoteEditor());
 $("new-category").addEventListener("click", () => openProfileEditor(null));
 for (const control of document.querySelectorAll("[data-close]")) {
   control.addEventListener("click", () => {
     if (!noteEditor.contains(control)) control.closest("dialog").close();
-    else if (!savingEditor) closeNoteEditor({ restoreFocus: true });
+    else requestEditorClose();
   });
 }
 $("note-dialog").addEventListener("cancel", (event) => {
   event.preventDefault();
-  if (!savingEditor) closeNoteEditor();
+  if ($("note-identities").open) {
+    $("note-identities").open = false;
+    $("note-identity-trigger").focus();
+  } else {
+    requestEditorClose();
+  }
+});
+$("draft-confirm").addEventListener("cancel", (event) => {
+  if (savingEditor) event.preventDefault();
 });
 noteEditor.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && replyParent && !savingEditor) closeNoteEditor({ restoreFocus: true });
 });
 document.addEventListener("click", (event) => {
+  if (!$("note-identities").contains(event.target)) $("note-identities").open = false;
   for (const menu of document.querySelectorAll(".note-menu[open]")) {
     if (!menu.contains(event.target)) menu.open = false;
   }
@@ -841,6 +1096,7 @@ $("quick-category").addEventListener("change", () => { renderIdentity(); cleanIm
 $("composer").addEventListener("submit", (event) => saveNote(event, "quick"));
 $("note-form").addEventListener("submit", (event) => saveNote(event, "note"));
 $("profile-form").addEventListener("submit", saveProfile);
+$("profile-back").addEventListener("click", () => navigate("notes"));
 $("edit-profile").addEventListener("click", () => openProfileEditor(currentProfile()));
 $("following").addEventListener("click", () => navigate("following"));
 $("followers").addEventListener("click", () => navigate("followers"));
