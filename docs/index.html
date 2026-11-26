@@ -2,17 +2,16 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#efede8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f8faf8">
   <meta name="description" content="Notların, görsellerin ve fikirlerin için tarayıcında yaşayan kişisel bir alan.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>x-notes · Kişisel not defteri</title>
   <link rel="icon" href="./icon.svg?v=3" type="image/svg+xml">
-  <link rel="manifest" href="./manifest.webmanifest?v=3">
+  <link rel="manifest" href="./manifest.webmanifest?v=4">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=3">
-  <link rel="stylesheet" href="/tool.css?v=20261126d">
-  <link rel="stylesheet" href="./app.css?v=4">
-  <script src="./app.js?v=4" type="module"></script>
+  <link rel="stylesheet" href="./app.css?v=5">
+  <script src="./app.js?v=5" type="module"></script>
 </head>
 <body>
   <div class="shell">
@@ -20,9 +19,9 @@
       <a class="brand" href="./" aria-label="x-notes ana sayfa"><img src="./icon.svg?v=3" alt="" width="29" height="29"><span>x-notes</span></a>
       <a class="catalog-link" href="/">Uygulamalar</a>
       <nav class="nav" aria-label="Çalışma alanı">
-        <button type="button" class="nav-item" data-view="notes"><span data-icon="home"></span> Anasayfa</button>
-        <button type="button" class="nav-item" data-view="saved"><span data-icon="bookmark"></span> Yer imleri</button>
-        <button type="button" class="nav-item" data-view="profile"><span data-icon="user"></span> Profil</button>
+        <button type="button" class="nav-item" data-view="notes"><span data-icon="home"></span><span>Anasayfa</span></button>
+        <button type="button" class="nav-item" data-view="saved"><span data-icon="bookmark"></span><span>Yer imleri</span></button>
+        <button type="button" class="nav-item" data-view="profile"><span data-icon="user"></span><span>Profil</span></button>
       </nav>
       <div class="rail-bottom">
         <button class="nav-item theme-button" type="button" id="theme"><span data-icon="sun"></span><span id="theme-label">Açık tema</span></button>
@@ -31,26 +30,28 @@
     </aside>
 
     <main id="main">
-      <header class="mobile-header"><a class="brand" href="./"><img src="./icon.svg?v=3" alt="" width="32" height="32"><span>x-notes</span></a><a class="catalog-link" href="/">Uygulamalar</a><button class="icon-button" type="button" id="mobile-theme" aria-label="Temayı değiştir"><span data-icon="sun"></span></button></header>
       <header class="page-header">
-        <div><h1 id="page-title">Anasayfa</h1><p id="page-description" hidden></p></div>
+        <a class="mobile-brand" href="./" aria-label="x-notes ana sayfa"><img src="./icon.svg?v=3" alt="" width="23" height="23"></a>
+        <div class="page-heading"><h1 id="page-title">Anasayfa</h1><p id="page-description" hidden></p></div>
+        <a class="catalog-link mobile-catalog" href="/">Uygulamalar</a>
+        <button class="icon-button mobile-theme" type="button" id="mobile-theme" aria-label="Temayı değiştir"><span data-icon="sun"></span></button>
         <button class="icon-button compose-trigger" type="button" id="new-note" aria-label="Yeni not" title="Yeni not"><span data-icon="plus"></span></button>
       </header>
 
       <form id="composer" class="composer" autocomplete="off">
         <div class="composer-top"><span class="avatar" data-avatar>BN</span><textarea id="quick-text" aria-label="Not metni" placeholder="Aklından ne geçiyor?" rows="2"></textarea></div>
-        <div class="identity-select"><label for="quick-category">Kimlik</label><select id="quick-category"></select></div>
         <p class="form-error" id="quick-error" role="alert" hidden></p>
         <div id="quick-attachments" class="attachments" hidden></div>
         <div class="composer-footer">
           <div class="tools">
             <button class="icon-button" id="quick-upload" type="button" aria-label="Görsel ekle" title="Görsel ekle"><span data-icon="image"></span></button>
             <input id="quick-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" multiple hidden>
-            <button class="icon-button" id="quick-tag" type="button" aria-label="Etiket ekle" title="Etiket ekle"><span data-icon="tag"></span></button>
-            <input id="quick-tags" class="tags-input" aria-label="Etiketler, virgülle ayır" placeholder="Etiketler" maxlength="200" hidden>
+            <button class="icon-button" id="quick-tag" type="button" aria-controls="quick-tags" aria-expanded="false" aria-label="Etiket ekle" title="Etiket ekle"><span data-icon="tag"></span></button>
           </div>
+          <select id="quick-category" aria-label="Not kimliği"></select>
           <button type="submit" class="button primary" id="quick-save" disabled>Kaydet</button>
         </div>
+        <input id="quick-tags" class="tags-input" aria-label="Etiketler, virgülle ayır" placeholder="Etiketler" maxlength="200" hidden>
       </form>
 
       <section id="profile" class="profile" hidden>
@@ -65,6 +66,7 @@
 
       <button class="button secondary back-button" id="back-to-profile" type="button" hidden>Profile dön</button>
       <section id="connections" class="panel connections" hidden></section>
+      <div class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="Notlarda ara" aria-label="Notlarda ara"></div>
       <div class="feed-header" id="feed-header">
         <button class="button secondary back-button" id="back-to-notes" type="button" hidden>Notlara dön</button>
         <div class="filters" id="feed-filters" role="group" aria-label="Not filtreleri">
@@ -83,7 +85,6 @@
     </main>
 
     <aside class="context">
-      <div class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="Notlarda ara" aria-label="Notlarda ara"></div>
       <section class="panel tag-panel">
         <h2><span data-icon="tag"></span> Etiketler</h2>
         <div id="tag-list" class="tag-list"><p>Bir nota etiket eklediğinde burada görünür.</p></div>

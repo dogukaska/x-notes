@@ -266,9 +266,6 @@ function render() {
   $("page-title").textContent = inProfile ? shown.name : title;
   $("page-description").textContent = inProfile ? noteTotal + " not" : description;
   $("page-description").hidden = !inProfile && !description;
-  const feedHeader = $("feed-header");
-  const anchor = view === "notes" ? $("composer") : $("filter-summary");
-  if (feedHeader.nextElementSibling !== anchor) anchor.before(feedHeader);
   $("composer").hidden = view !== "notes";
   $("profile").hidden = !inProfile;
   const connectionView = view === "following" || view === "followers";
@@ -783,7 +780,7 @@ function renderTheme() {
   try { preference = localStorage.getItem("tema") ?? preference; } catch {}
   const theme = preference === "light" || preference === "dark" ? preference : preferredTheme.matches ? "dark" : "light";
   document.documentElement.dataset.theme = theme;
-  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#1f2022" : "#efede8";
+  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#171d1a" : "#f8faf8";
   $("theme-label").textContent = theme === "light" ? "Koyu tema" : "Açık tema";
   $("theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
   $("mobile-theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
@@ -856,6 +853,7 @@ $("search").addEventListener("input", () => {
 $("quick-tag").addEventListener("click", () => {
   const input = $("quick-tags");
   input.hidden = !input.hidden;
+  $("quick-tag").setAttribute("aria-expanded", String(!input.hidden));
   if (!input.hidden) input.focus();
 });
 $("profile-name").addEventListener("input", () => {
