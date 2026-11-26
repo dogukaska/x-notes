@@ -1,7 +1,7 @@
 const database = new Promise((resolve, reject) => {
   const request = indexedDB.open("x-notes", 1);
   request.onupgradeneeded = () => {
-    for (const name of ["notes", "profiles", "settings"]) {
+    for (const name of ["notes", "profiles"]) {
       request.result.createObjectStore(name, { keyPath: "id" });
     }
   };
@@ -13,12 +13,11 @@ const database = new Promise((resolve, reject) => {
 export async function readAll() {
   const db = await database;
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(["notes", "profiles", "settings"], "readonly");
+    const transaction = db.transaction(["notes", "profiles"], "readonly");
     const notes = transaction.objectStore("notes").getAll();
     const profiles = transaction.objectStore("profiles").getAll();
-    const settings = transaction.objectStore("settings").get("preferences");
     transaction.oncomplete = () => resolve({
-      notes: notes.result, profiles: profiles.result, settings: settings.result,
+      notes: notes.result, profiles: profiles.result,
     });
     transaction.onabort = () => reject(transaction.error);
   });

@@ -23,7 +23,7 @@ const icons = {
 };
 
 function icon(name) {
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + icons[name] + '</svg>';
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + icons[name] + '</svg>';
 }
 
 for (const slot of document.querySelectorAll("[data-icon]")) slot.innerHTML = icon(slot.dataset.icon);
@@ -31,6 +31,8 @@ for (const slot of document.querySelectorAll("[data-icon]")) slot.innerHTML = ic
 const selfId = "self";
 const defaultProfile = { id: selfId, name: "Benim notlarım", handle: "ben", bio: "", photo: null, banner: null };
 const dateFormat = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" });
+const preferredTheme = matchMedia("(prefers-color-scheme: dark)");
+let sessionTheme;
 const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel("x-notes") : null;
 const routeTitles = {
   notes: ["Notlar", "Kendine ait bir zaman akışı."],
@@ -42,7 +44,6 @@ const routeTitles = {
   thread: ["Konuşma", ""],
 };
 
-let cache = { notes: [], profiles: [], settings: {} };
 let notes = new Map();
 let profiles = new Map([[selfId, defaultProfile]]);
 let children = new Map();
@@ -187,7 +188,6 @@ async function refresh() {
   const version = ++refreshVersion;
   const fresh = await readAll();
   if (version !== refreshVersion) return;
-  cache = fresh;
   notes = new Map(fresh.notes.map((note) => [note.id, note]));
   profiles = new Map([[selfId, defaultProfile], ...fresh.profiles.map((profile) => [profile.id, profile])]);
   categories = [...profiles.values()].filter((profile) => profile.id !== selfId)
@@ -260,11 +260,6 @@ function renderConnections() {
 function render() {
   const { view, id } = route;
   const [title, description] = routeTitles[view];
-  const theme = cache.settings?.theme === "light" ? "light" : "dark";
-  document.documentElement.dataset.theme = theme;
-  $("theme-label").textContent = theme === "light" ? "Koyu tema" : "Açık tema";
-  $("theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
-  $("mobile-theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
   $("page-title").textContent = view === "category" && profiles.has(id) ? profiles.get(id).name : title;
   $("page-description").textContent = description;
   $("page-description").hidden = !description;
@@ -714,19 +709,28 @@ async function saveProfile(event) {
   }
 }
 
-async function toggleTheme() {
-  try {
-    await persist("settings", (store) => {
-      const request = store.get("preferences");
-      request.onsuccess = () => {
-        const theme = request.result?.theme === "light" ? "dark" : "light";
-        store.put({ id: "preferences", theme });
-      };
-    });
-  } catch (error) {
-    fail(error);
-  }
+function renderTheme() {
+  let preference = sessionTheme;
+  try { preference = localStorage.getItem("tema") ?? preference; } catch {}
+  const theme = preference === "light" || preference === "dark" ? preference : preferredTheme.matches ? "dark" : "light";
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#1f2022" : "#efede8";
+  $("theme-label").textContent = theme === "light" ? "Koyu tema" : "Açık tema";
+  $("theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
+  $("mobile-theme").firstElementChild.innerHTML = icon(theme === "light" ? "moon" : "sun");
 }
+
+function toggleTheme() {
+  sessionTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  try { localStorage.setItem("tema", sessionTheme); } catch {}
+  renderTheme();
+}
+
+preferredTheme.addEventListener("change", renderTheme);
+window.addEventListener("storage", (event) => {
+  if (!event.key || event.key === "tema") renderTheme();
+});
+renderTheme();
 
 for (const control of document.querySelectorAll("[data-view]")) control.addEventListener("click", () => navigate(control.dataset.view));
 for (const control of document.querySelectorAll("[data-compose]")) control.addEventListener("click", () => openNoteEditor());

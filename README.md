@@ -14,4 +14,4 @@ Tarayıcıda `http://localhost:8000/` adresini aç. Harici bağımlılık ve der
 
 ## Yayın
 
-GitHub Pages kaynağı `master` dalındaki `/docs` dizinidir. Site adresi https://dogukaska.github.io/x-notes/.
+Canlı site https://dogukaska.github.io/x-notes/ adresindedir ve Dijital Çakı'nın Pages deposundaki `/x-notes/` dizininden sunulur. Kaynak bu depodaki `docs/` dizinidir.
