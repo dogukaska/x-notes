@@ -2,7 +2,7 @@ import { readAll, write } from "./store.js";
 
 const $ = (id) => document.getElementById(id);
 const icons = {
-  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  home: '<path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/>',
   bookmark: '<path d="M6 5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16l-6-4-6 4z"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v2"/>',
   users: '<circle cx="9" cy="8" r="3"/><path d="M2 20v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2m1-15a3 3 0 0 1 0 6m1 3a4 4 0 0 1 4 4v2"/>',
@@ -33,7 +33,7 @@ const preferredTheme = matchMedia("(prefers-color-scheme: dark)");
 let sessionTheme;
 const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel("x-notes") : null;
 const routeTitles = {
-  notes: ["Notlar", "Kendine ait bir zaman akışı."],
+  notes: ["Anasayfa", ""],
   saved: ["Yer imleri", "Daha sonra dönmek istediğin notlar."],
   profile: ["Profil", ""],
   category: ["Kategori profili", ""],
@@ -247,8 +247,8 @@ function renderIdentity() {
   $("profile-bio").hidden = !shown.bio;
   $("profile-cover").replaceChildren(...(shown.banner ? [imageFor(shown.banner)] : []));
   $("profile-links").hidden = shown.id !== selfId;
-  $("following").textContent = categories.length + " Takip edilen";
-  $("followers").textContent = categories.length + " Takipçi";
+  $("following").replaceChildren(node("strong", null, String(categories.length)), " Takip edilen");
+  $("followers").replaceChildren(node("strong", null, String(categories.length)), " Takipçi");
 }
 
 function renderConnections() {
@@ -261,11 +261,18 @@ function renderConnections() {
 function render() {
   const { view, id } = route;
   const [title, description] = routeTitles[view];
-  $("page-title").textContent = view === "category" && profiles.has(id) ? profiles.get(id).name : title;
-  $("page-description").textContent = description;
-  $("page-description").hidden = !description;
+  const inProfile = view === "profile" || (view === "category" && profiles.has(id));
+  const shown = currentProfile();
+  const noteTotal = inProfile ? [...notes.values()].filter((note) => !note.deleted && note.authorId === shown.id && !note.parentId).length : 0;
+  $("main").dataset.view = view;
+  $("page-title").textContent = inProfile ? shown.name : title;
+  $("page-description").textContent = inProfile ? noteTotal + " not" : description;
+  $("page-description").hidden = !inProfile && !description;
+  const feedHeader = $("feed-header");
+  const anchor = view === "notes" ? $("composer") : $("filter-summary");
+  if (feedHeader.nextElementSibling !== anchor) anchor.before(feedHeader);
   $("composer").hidden = view !== "notes";
-  $("profile").hidden = view !== "profile" && !(view === "category" && profiles.has(id));
+  $("profile").hidden = !inProfile;
   const connectionView = view === "following" || view === "followers";
   $("connections").hidden = !connectionView;
   $("back-to-profile").hidden = !connectionView;
@@ -365,7 +372,7 @@ function renderFeed() {
   }
   $("feed-filters").hidden = focused || inProfile;
   $("profile-filters").hidden = !inProfile;
-  $("note-count").textContent = focused ? "" : entries.length + " not";
+  $("note-count").textContent = focused || inProfile ? "" : entries.length + " not";
   $("filter-summary").hidden = focused || (!tag && !query.trim());
   $("filter-summary").textContent = [tag && "#" + tag, query.trim() && "Arama: " + query.trim()].filter(Boolean).join(" · ");
   if (view === "following" || view === "followers") {
@@ -379,16 +386,14 @@ function renderFeed() {
     }
   } else {
     const empty = node("div", "empty");
-    const badge = node("span", "empty-icon");
-    badge.innerHTML = icon(view === "saved" ? "bookmark" : "note");
     const filtering = Boolean(tag || query.trim() || filter === "pinned");
     const missing = view === "thread" || (view === "category" && !profiles.has(route.id));
     const title = filtering ? "Eşleşen not bulunamadı"
       : missing ? "Bu kayıt bulunamadı" : view === "saved" ? "Henüz yer imi yok"
       : filter === "replies" ? "Henüz yanıt yok" : filter === "media" ? "Henüz görsel yok" : "Henüz not yok";
-    empty.append(badge, node("h2", null, title));
+    empty.append(node("h2", null, title));
     if (!filtering && !missing && view !== "saved" && filter === "all") {
-      empty.append(node("p", null, "Bir düşünceyle başla."), button("Not yaz", "button secondary", () => openNoteEditor()));
+      empty.append(button("Not yaz", "button secondary", () => openNoteEditor()));
     } else if (!filtering && view === "saved") {
       empty.append(node("p", null, "Bir notu yer imlerine eklediğinde burada görünür."));
     }
@@ -430,7 +435,7 @@ function noteCard(note) {
   const time = node("time", null, dateFormat.format(note.createdAt));
   time.dateTime = new Date(note.createdAt).toISOString();
   date.append(time);
-  if (note.editedAt) date.append(node("span", null, "Düzenlendi"));
+  if (note.editedAt) date.append(node("span", "edited-label", "Düzenlendi"));
   header.append(fillAvatar(node("span", "avatar"), author), identity, date);
   article.append(header);
 

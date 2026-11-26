@@ -7,20 +7,20 @@
   <meta name="description" content="Notların, görsellerin ve fikirlerin için tarayıcında yaşayan kişisel bir alan.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>x-notes · Kişisel not defteri</title>
-  <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="icon" href="./icon.svg?v=3" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest?v=3">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=3">
   <link rel="stylesheet" href="/tool.css?v=20261126d">
-  <link rel="stylesheet" href="./app.css?v=2">
-  <script src="./app.js?v=2" type="module"></script>
+  <link rel="stylesheet" href="./app.css?v=3">
+  <script src="./app.js?v=3" type="module"></script>
 </head>
 <body>
   <div class="shell">
     <aside class="rail">
-      <a class="brand" href="./" aria-label="x-notes ana sayfa"><img src="./icon.svg" alt="" width="39" height="39"><span>x-notes</span></a>
+      <a class="brand" href="./" aria-label="x-notes ana sayfa"><img src="./icon.svg?v=3" alt="" width="29" height="29"><span>x-notes</span></a>
       <a class="catalog-link" href="/">Uygulamalar</a>
       <nav class="nav" aria-label="Çalışma alanı">
-        <button type="button" class="nav-item" data-view="notes"><span data-icon="grid"></span> Notlar</button>
+        <button type="button" class="nav-item" data-view="notes"><span data-icon="home"></span> Anasayfa</button>
         <button type="button" class="nav-item" data-view="saved"><span data-icon="bookmark"></span> Yer imleri</button>
         <button type="button" class="nav-item" data-view="profile"><span data-icon="user"></span> Profil</button>
       </nav>
@@ -32,9 +32,9 @@
     </aside>
 
     <main id="main">
-      <header class="mobile-header"><a class="brand" href="./"><img src="./icon.svg" alt="" width="32" height="32"><span>x-notes</span></a><a class="catalog-link" href="/">Uygulamalar</a><button class="icon-button" type="button" id="mobile-theme" aria-label="Temayı değiştir"><span data-icon="sun"></span></button></header>
+      <header class="mobile-header"><a class="brand" href="./"><img src="./icon.svg?v=3" alt="" width="32" height="32"><span>x-notes</span></a><a class="catalog-link" href="/">Uygulamalar</a><button class="icon-button" type="button" id="mobile-theme" aria-label="Temayı değiştir"><span data-icon="sun"></span></button></header>
       <header class="page-header">
-        <div><h1 id="page-title">Notlar</h1><p id="page-description">Kendine ait bir zaman akışı.</p></div>
+        <div><h1 id="page-title">Anasayfa</h1><p id="page-description" hidden></p></div>
         <button class="button primary mobile-compose" type="button" data-compose><span data-icon="plus"></span> Yeni not</button>
       </header>
 
@@ -55,11 +55,11 @@
       </form>
 
       <section id="profile" class="profile" hidden>
-        <div class="profile-cover" id="profile-cover"></div>
+        <div class="profile-cover" id="profile-cover" aria-hidden="true"></div>
         <div class="profile-content">
           <span class="avatar profile-avatar" data-avatar>BN</span>
           <button class="button secondary" id="edit-profile" type="button">Profili düzenle</button>
-          <h2 data-name>Benim notlarım</h2><p data-handle>@ben</p><p id="profile-bio" hidden></p>
+          <h2 data-name>Benim notlarım</h2><p class="profile-handle" data-handle>@ben</p><p id="profile-bio" hidden></p>
           <div class="profile-links" id="profile-links"><button type="button" id="following"></button><button type="button" id="followers"></button></div>
         </div>
       </section>
@@ -93,10 +93,7 @@
         <h2><span data-icon="tag"></span> Etiketler</h2>
         <div id="tag-list" class="tag-list"><p>Bir nota etiket eklediğinde burada görünür.</p></div>
       </section>
-      <section class="privacy">
-        <span class="privacy-icon" data-icon="lock"></span>
-        <div><h2>Bu tarayıcıya özel</h2><p>Notların ve görsellerin bu tarayıcıda saklanır. Hesap ve senkronizasyon yok.</p></div>
-      </section>
+      <p class="privacy"><span data-icon="lock"></span> Notların bu tarayıcıya özel.</p>
     </aside>
   </div>
 
