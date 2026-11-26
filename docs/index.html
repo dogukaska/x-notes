@@ -11,8 +11,8 @@
   <link rel="manifest" href="./manifest.webmanifest?v=3">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=3">
   <link rel="stylesheet" href="/tool.css?v=20261126d">
-  <link rel="stylesheet" href="./app.css?v=3">
-  <script src="./app.js?v=3" type="module"></script>
+  <link rel="stylesheet" href="./app.css?v=4">
+  <script src="./app.js?v=4" type="module"></script>
 </head>
 <body>
   <div class="shell">
@@ -24,7 +24,6 @@
         <button type="button" class="nav-item" data-view="saved"><span data-icon="bookmark"></span> Yer imleri</button>
         <button type="button" class="nav-item" data-view="profile"><span data-icon="user"></span> Profil</button>
       </nav>
-      <button class="button primary rail-compose" type="button" data-compose><span data-icon="plus"></span> Yeni not</button>
       <div class="rail-bottom">
         <button class="nav-item theme-button" type="button" id="theme"><span data-icon="sun"></span><span id="theme-label">Açık tema</span></button>
         <button class="account" type="button" data-view="profile"><span class="avatar" data-avatar>BN</span><span><strong data-name>Benim notlarım</strong><small data-handle>@ben</small></span><span class="account-icon" data-icon="settings"></span></button>
@@ -35,7 +34,7 @@
       <header class="mobile-header"><a class="brand" href="./"><img src="./icon.svg?v=3" alt="" width="32" height="32"><span>x-notes</span></a><a class="catalog-link" href="/">Uygulamalar</a><button class="icon-button" type="button" id="mobile-theme" aria-label="Temayı değiştir"><span data-icon="sun"></span></button></header>
       <header class="page-header">
         <div><h1 id="page-title">Anasayfa</h1><p id="page-description" hidden></p></div>
-        <button class="button primary mobile-compose" type="button" data-compose><span data-icon="plus"></span> Yeni not</button>
+        <button class="icon-button compose-trigger" type="button" id="new-note" aria-label="Yeni not" title="Yeni not"><span data-icon="plus"></span></button>
       </header>
 
       <form id="composer" class="composer" autocomplete="off">
@@ -50,7 +49,7 @@
             <button class="icon-button" id="quick-tag" type="button" aria-label="Etiket ekle" title="Etiket ekle"><span data-icon="tag"></span></button>
             <input id="quick-tags" class="tags-input" aria-label="Etiketler, virgülle ayır" placeholder="Etiketler" maxlength="200" hidden>
           </div>
-          <button type="submit" class="button primary" id="quick-save" disabled>Notu kaydet</button>
+          <button type="submit" class="button primary" id="quick-save" disabled>Kaydet</button>
         </div>
       </form>
 
@@ -60,7 +59,7 @@
           <span class="avatar profile-avatar" data-avatar>BN</span>
           <button class="button secondary" id="edit-profile" type="button">Profili düzenle</button>
           <h2 data-name>Benim notlarım</h2><p class="profile-handle" data-handle>@ben</p><p id="profile-bio" hidden></p>
-          <div class="profile-links" id="profile-links"><button type="button" id="following"></button><button type="button" id="followers"></button></div>
+          <div class="profile-links" id="profile-links"><button type="button" id="following"></button><button type="button" id="followers"></button><button type="button" id="new-category"><span data-icon="plus"></span> Yeni kategori</button></div>
         </div>
       </section>
 
@@ -85,10 +84,6 @@
 
     <aside class="context">
       <div class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="Notlarda ara" aria-label="Notlarda ara"></div>
-      <section class="panel">
-        <div class="panel-heading"><h2><span data-icon="users"></span> Kategoriler</h2><button class="icon-button" type="button" data-new-category aria-label="Yeni kategori" title="Yeni kategori"><span data-icon="plus"></span></button></div>
-        <div id="category-list" class="category-list"></div>
-      </section>
       <section class="panel tag-panel">
         <h2><span data-icon="tag"></span> Etiketler</h2>
         <div id="tag-list" class="tag-list"><p>Bir nota etiket eklediğinde burada görünür.</p></div>
@@ -111,7 +106,7 @@
         <p class="form-error" id="note-error" role="alert" hidden></p>
         <input id="note-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" multiple hidden>
       </div>
-      <div class="dialog-footer"><button class="button secondary" type="button" data-close>Vazgeç</button><button class="button primary" id="note-save" type="submit" disabled>Notu kaydet</button></div>
+      <div class="dialog-footer"><button class="button secondary" type="button" data-close>Vazgeç</button><button class="button primary" id="note-save" type="submit" disabled>Kaydet</button></div>
     </form>
   </dialog>
 

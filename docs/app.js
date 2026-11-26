@@ -5,7 +5,6 @@ const icons = {
   home: '<path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/>',
   bookmark: '<path d="M6 5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16l-6-4-6 4z"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v2"/>',
-  users: '<circle cx="9" cy="8" r="3"/><path d="M2 20v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2m1-15a3 3 0 0 1 0 6m1 3a4 4 0 0 1 4 4v2"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
   moon: '<path d="M20 15A8 8 0 0 1 9 4a9 9 0 1 0 11 11Z"/>',
@@ -252,10 +251,9 @@ function renderIdentity() {
 }
 
 function renderConnections() {
-  const heading = button("Yeni kategori", "button secondary", () => openProfileEditor(null));
   const list = node("div", "category-list");
   list.append(...(categories.length ? categories.map(categoryButton) : [node("p", null, "Henüz kategori eklemedin.")]));
-  $("connections").replaceChildren(heading, list);
+  $("connections").replaceChildren(list);
 }
 
 function render() {
@@ -287,9 +285,6 @@ function render() {
   }
   renderCategoryOptions($("quick-category"));
   if ($("note-dialog").open || replyParent) renderCategoryOptions($("note-category"));
-  $("category-list").replaceChildren(...(categories.length
-    ? categories.map(categoryButton)
-    : [node("p", null, "Notlarına ayrı bir profil ekle.")]));
   renderIdentity();
   renderFeed();
 }
@@ -392,9 +387,7 @@ function renderFeed() {
       : missing ? "Bu kayıt bulunamadı" : view === "saved" ? "Henüz yer imi yok"
       : filter === "replies" ? "Henüz yanıt yok" : filter === "media" ? "Henüz görsel yok" : "Henüz not yok";
     empty.append(node("h2", null, title));
-    if (!filtering && !missing && view !== "saved" && filter === "all") {
-      empty.append(button("Not yaz", "button secondary", () => openNoteEditor()));
-    } else if (!filtering && view === "saved") {
+    if (!filtering && view === "saved") {
       empty.append(node("p", null, "Bir notu yer imlerine eklediğinde burada görünür."));
     }
     $("feed").append(empty);
@@ -599,7 +592,6 @@ function openNoteEditor({ note = null, parent = null } = {}) {
   editingNote = note;
   replyParent = parent;
   $("note-dialog-title").textContent = note ? "Notu düzenle" : parent ? "Yanıt yaz" : "Yeni not";
-  $("note-save").textContent = note ? "Değişiklikleri kaydet" : parent ? "Yanıtı kaydet" : "Notu kaydet";
   $("note-text-label").textContent = parent ? "Yanıt" : "Not";
   $("note-text").rows = parent ? 2 : 5;
   $("note-text").placeholder = parent ? "Yanıtını yaz" : "Aklından ne geçiyor?";
@@ -810,8 +802,8 @@ window.addEventListener("storage", (event) => {
 renderTheme();
 
 for (const control of document.querySelectorAll("[data-view]")) control.addEventListener("click", () => navigate(control.dataset.view));
-for (const control of document.querySelectorAll("[data-compose]")) control.addEventListener("click", () => openNoteEditor());
-for (const control of document.querySelectorAll("[data-new-category]")) control.addEventListener("click", () => openProfileEditor(null));
+$("new-note").addEventListener("click", () => openNoteEditor());
+$("new-category").addEventListener("click", () => openProfileEditor(null));
 for (const control of document.querySelectorAll("[data-close]")) {
   control.addEventListener("click", () => {
     if (!noteEditor.contains(control)) control.closest("dialog").close();
