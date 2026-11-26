@@ -11,8 +11,8 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="stylesheet" href="/tool.css?v=20261126d">
-  <link rel="stylesheet" href="./app.css?v=1">
-  <script src="./app.js?v=1" type="module"></script>
+  <link rel="stylesheet" href="./app.css?v=2">
+  <script src="./app.js?v=2" type="module"></script>
 </head>
 <body>
   <div class="shell">
@@ -39,7 +39,7 @@
       </header>
 
       <form id="composer" class="composer" autocomplete="off">
-        <div class="composer-top"><span class="avatar" data-avatar>BN</span><textarea id="quick-text" aria-label="Not metni" placeholder="Aklından ne geçiyor?" rows="3"></textarea></div>
+        <div class="composer-top"><span class="avatar" data-avatar>BN</span><textarea id="quick-text" aria-label="Not metni" placeholder="Aklından ne geçiyor?" rows="2"></textarea></div>
         <div class="identity-select"><label for="quick-category">Kimlik</label><select id="quick-category"></select></div>
         <p class="form-error" id="quick-error" role="alert" hidden></p>
         <div id="quick-attachments" class="attachments" hidden></div>
@@ -68,9 +68,14 @@
       <section id="connections" class="panel connections" hidden></section>
       <div class="feed-header" id="feed-header">
         <button class="button secondary back-button" id="back-to-notes" type="button" hidden>Notlara dön</button>
-        <div class="filters" aria-label="Not filtreleri">
+        <div class="filters" id="feed-filters" role="group" aria-label="Not filtreleri">
           <button class="filter" type="button" data-filter="all" aria-pressed="true">Tümü</button>
           <button class="filter" type="button" data-filter="pinned" aria-pressed="false">Sabitlenenler</button>
+        </div>
+        <div class="filters profile-filters" id="profile-filters" role="group" aria-label="Profilde göster" hidden>
+          <button class="filter" type="button" data-filter="all" aria-pressed="true">Notlar</button>
+          <button class="filter" type="button" data-filter="replies" aria-pressed="false">Yanıtlar</button>
+          <button class="filter" type="button" data-filter="media" aria-pressed="false">Görseller</button>
         </div>
         <span id="note-count" class="note-count"></span>
       </div>
@@ -99,9 +104,8 @@
     <form id="note-form" autocomplete="off">
       <div class="dialog-header"><h2 id="note-dialog-title">Yeni not</h2><button class="icon-button" type="button" data-close aria-label="Kapat"><span data-icon="close"></span></button></div>
       <div class="dialog-body">
-        <div class="reply-context" id="reply-context" hidden></div>
         <label for="note-category">Kimlik</label><select id="note-category"></select>
-        <label for="note-text">Not</label>
+        <label id="note-text-label" for="note-text">Not</label>
         <textarea id="note-text" placeholder="Aklından ne geçiyor?" rows="5" autofocus></textarea>
         <label for="note-tags">Etiketler</label>
         <input id="note-tags" maxlength="200" placeholder="Örnek: fikir, iş">

@@ -17,8 +17,6 @@ const icons = {
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
   note: '<path d="M5 4h10l4 4v12H5zM14 4v5h5M8 12h8m-8 4h5"/>',
   pin: '<path d="m9 3 9 3-1 3-2 1v5l-2 2-7-2v-3l3-4-1-2zM9 16l-2 5"/>',
-  edit: '<path d="m14 6 4 4M4 16l-1 5 5-1L21 7l-4-4z"/>',
-  trash: '<path d="M3 6h18M8 6V3h8v3m3 0-1 15H6L5 6m5 4v7m4-7v7"/>',
   reply: '<path d="M21 11a8 8 0 0 1-8 8H4l2-4a8 8 0 1 1 15-4Z"/>',
 };
 
@@ -61,6 +59,8 @@ let editingProfile;
 let autoHandle = false;
 let editingNote = null;
 let replyParent = null;
+let savingEditor = false;
+const noteEditor = $("note-form");
 let quickUploads = [];
 let noteUploads = [];
 let photo;
@@ -140,6 +140,7 @@ function navigate(view, id = "") {
 }
 
 function applyRoute() {
+  if (replyParent && !savingEditor) closeNoteEditor();
   route = readRoute();
   query = "";
   tag = "";
@@ -278,7 +279,7 @@ function render() {
     else nav.removeAttribute("aria-current");
   }
   renderCategoryOptions($("quick-category"));
-  if ($("note-dialog").open) renderCategoryOptions($("note-category"));
+  if ($("note-dialog").open || replyParent) renderCategoryOptions($("note-category"));
   $("category-list").replaceChildren(...(categories.length
     ? categories.map(categoryButton)
     : [node("p", null, "Notlarına ayrı bir profil ekle.")]));
@@ -315,6 +316,7 @@ function listNotes() {
     return root && hasVisibleNotes(root) ? [root] : [];
   }
   const term = normalize(query.trim());
+  const inProfile = view === "profile" || view === "category";
   const useAllThreads = view === "notes" && !term && !tag && filter === "all";
   return [...notes.values()].filter((note) => {
     if (useAllThreads) return !notes.has(note.parentId) && hasVisibleNotes(note);
@@ -323,6 +325,9 @@ function listNotes() {
     if (view === "profile" && note.authorId !== selfId) return false;
     if (view === "category" && note.authorId !== id) return false;
     if (filter === "pinned" && !note.pinned) return false;
+    if (inProfile && filter === "all" && note.parentId) return false;
+    if (inProfile && filter === "replies" && !note.parentId) return false;
+    if (inProfile && filter === "media" && !note.images.length) return false;
     if (tag && !note.tags.includes(tag)) return false;
     const author = profileFor(note.authorId);
     return !term || normalize([note.content, ...note.tags, author.name, "@" + author.handle].join(" ")).includes(term);
@@ -351,11 +356,15 @@ function renderFeed() {
   const focused = ["thread", "following", "followers"].includes(view);
   const entries = listNotes();
   const showReplies = view === "thread" || (view === "notes" && !query.trim() && !tag && filter === "all");
+  const activeInput = noteEditor.contains(document.activeElement) ? document.activeElement : null;
+  const inProfile = view === "profile" || view === "category";
+  if (replyParent) $("note-dialog").append(noteEditor);
   $("feed").replaceChildren();
   for (const item of document.querySelectorAll("[data-filter]")) {
     item.setAttribute("aria-pressed", String(item.dataset.filter === filter));
   }
-  $("feed-header").querySelector(".filters").hidden = focused;
+  $("feed-filters").hidden = focused || inProfile;
+  $("profile-filters").hidden = !inProfile;
   $("note-count").textContent = focused ? "" : entries.length + " not";
   $("filter-summary").hidden = focused || (!tag && !query.trim());
   $("filter-summary").textContent = [tag && "#" + tag, query.trim() && "Arama: " + query.trim()].filter(Boolean).join(" · ");
@@ -375,14 +384,19 @@ function renderFeed() {
     const filtering = Boolean(tag || query.trim() || filter === "pinned");
     const missing = view === "thread" || (view === "category" && !profiles.has(route.id));
     const title = filtering ? "Eşleşen not bulunamadı"
-      : missing ? "Bu kayıt bulunamadı" : view === "saved" ? "Henüz yer imi yok" : "Henüz not yok";
+      : missing ? "Bu kayıt bulunamadı" : view === "saved" ? "Henüz yer imi yok"
+      : filter === "replies" ? "Henüz yanıt yok" : filter === "media" ? "Henüz görsel yok" : "Henüz not yok";
     empty.append(badge, node("h2", null, title));
-    if (!filtering && !missing && view !== "saved") {
+    if (!filtering && !missing && view !== "saved" && filter === "all") {
       empty.append(node("p", null, "Bir düşünceyle başla."), button("Not yaz", "button secondary", () => openNoteEditor()));
     } else if (!filtering && view === "saved") {
       empty.append(node("p", null, "Bir notu yer imlerine eklediğinde burada görünür."));
     }
     $("feed").append(empty);
+  }
+  if (replyParent) {
+    if (mountReplyEditor()) activeInput?.focus({ preventScroll: true });
+    else if (!savingEditor) closeNoteEditor();
   }
   cleanImages();
 }
@@ -450,6 +464,8 @@ function noteCard(note) {
 
   const actions = node("div", "note-actions");
   const reply = iconButton("Yanıtla", "reply", () => openNoteEditor({ parent: note }));
+  reply.setAttribute("aria-expanded", "false");
+  reply.setAttribute("aria-controls", "note-form");
   reply.classList.add("reply-action");
   reply.append(node("span", null, "Yanıtla"));
   actions.append(reply);
@@ -458,11 +474,24 @@ function noteCard(note) {
   actions.append(
     iconButton(note.pinned ? "Sabitlemeyi kaldır" : "Sabitle", "pin", () => toggleNote(note, "pinned"), note.pinned),
     iconButton(note.saved ? "Yer iminden kaldır" : "Yer imine ekle", "bookmark", () => toggleNote(note, "saved"), note.saved),
-    iconButton("Düzenle", "edit", () => openNoteEditor({ note })),
   );
-  const remove = iconButton("Sil", "trash", () => deleteNote(note));
-  remove.classList.add("danger");
-  actions.append(remove);
+  const menu = node("details", "note-menu");
+  const trigger = node("summary", "icon-button");
+  trigger.setAttribute("aria-label", "Not işlemleri");
+  trigger.title = "Not işlemleri";
+  trigger.textContent = "⋯";
+  const menuItems = node("div", "note-menu-items");
+  const edit = button("Düzenle", "menu-action", () => {
+    menu.open = false;
+    openNoteEditor({ note });
+  });
+  const remove = button("Sil", "menu-action", () => {
+    menu.open = false;
+    deleteNote(note);
+  });
+  menuItems.append(edit, remove);
+  menu.append(trigger, menuItems);
+  actions.append(menu);
   article.append(actions);
   return article;
 }
@@ -533,21 +562,59 @@ for (const prefix of Object.keys(forms)) {
   });
 }
 
+function mountReplyEditor() {
+  const article = $("note-" + replyParent.id);
+  const trigger = article?.querySelector(".reply-action");
+  if (!trigger) return false;
+  article.append(noteEditor);
+  trigger.setAttribute("aria-expanded", "true");
+  return true;
+}
+
+function closeNoteEditor({ restoreFocus = false } = {}) {
+  const trigger = replyParent && $("note-" + replyParent.id)?.querySelector(".reply-action");
+  trigger?.setAttribute("aria-expanded", "false");
+  $("note-dialog").append(noteEditor);
+  $("note-dialog").close();
+  noteEditor.classList.remove("inline-reply");
+  editingNote = null;
+  replyParent = null;
+  noteUploads = [];
+  renderUploads("note");
+  if (restoreFocus) trigger?.focus();
+}
+
 function openNoteEditor({ note = null, parent = null } = {}) {
+  if (savingEditor) return;
+  if (replyParent && parent?.id === replyParent.id) {
+    $("note-text").focus();
+    return;
+  }
+  if (replyParent) closeNoteEditor();
   editingNote = note;
   replyParent = parent;
   $("note-dialog-title").textContent = note ? "Notu düzenle" : parent ? "Yanıt yaz" : "Yeni not";
   $("note-save").textContent = note ? "Değişiklikleri kaydet" : parent ? "Yanıtı kaydet" : "Notu kaydet";
+  $("note-text-label").textContent = parent ? "Yanıt" : "Not";
+  $("note-text").rows = parent ? 2 : 5;
+  $("note-text").placeholder = parent ? "Yanıtını yaz" : "Aklından ne geçiyor?";
   $("note-text").value = note?.content ?? "";
   $("note-tags").value = note?.tags.join(", ") ?? "";
   $("note-error").hidden = true;
-  $("reply-context").hidden = !parent;
-  if (parent) $("reply-context").textContent = "@" + profileFor(parent.authorId).handle + " adlı profile yanıt veriyorsun.";
   noteUploads = [...(note?.images ?? [])];
   const selected = note?.authorId ?? (route.view === "category" ? currentProfile().id : $("quick-category").value);
   renderCategoryOptions($("note-category"), selected);
   renderUploads("note");
-  $("note-dialog").showModal();
+  if (parent) {
+    noteEditor.classList.add("inline-reply");
+    $("note-dialog-title").textContent = "@" + profileFor(parent.authorId).handle + " adlı profile yanıt";
+    if (!mountReplyEditor()) {
+      closeNoteEditor();
+      return;
+    }
+  } else {
+    $("note-dialog").showModal();
+  }
   $("note-text").focus();
 }
 
@@ -565,8 +632,9 @@ async function saveNote(event, prefix) {
     authorId: $(prefix + "-category").value,
   };
   const save = $(prefix + "-save");
-  if (save.disabled) return;
+  if (save.disabled || (prefix === "note" && savingEditor)) return;
   save.disabled = true;
+  if (prefix === "note") savingEditor = true;
   $(prefix + "-error").hidden = true;
   try {
     if (editing) {
@@ -575,7 +643,7 @@ async function saveNote(event, prefix) {
       const newNote = { id: crypto.randomUUID(), ...changes, parentId, createdAt: Date.now(), pinned: false, saved: false };
       await persist("notes", (store) => store.add(newNote));
     }
-    if (prefix === "note") $("note-dialog").close();
+    if (prefix === "note") closeNoteEditor({ restoreFocus: Boolean(parentId) && !editing });
     else {
       $("composer").reset();
       $("quick-category").value = changes.authorId;
@@ -583,11 +651,15 @@ async function saveNote(event, prefix) {
       renderIdentity();
       renderUploads("quick");
     }
-    if (parentId && notes.has(parentId) && !editing) openThread(notes.get(parentId));
+    if (parentId && !editing && notes.has(parentId) && route.view !== "thread" &&
+        (route.view !== "notes" || filter !== "all" || tag || query.trim())) {
+      openThread(notes.get(parentId));
+    }
     toast(editing ? "Not güncellendi." : parentId ? "Yanıt kaydedildi." : "Not kaydedildi.");
   } catch (error) {
     fail(error, prefix + "-error");
   } finally {
+    if (prefix === "note") savingEditor = false;
     updateSave(prefix);
   }
 }
@@ -735,7 +807,31 @@ renderTheme();
 for (const control of document.querySelectorAll("[data-view]")) control.addEventListener("click", () => navigate(control.dataset.view));
 for (const control of document.querySelectorAll("[data-compose]")) control.addEventListener("click", () => openNoteEditor());
 for (const control of document.querySelectorAll("[data-new-category]")) control.addEventListener("click", () => openProfileEditor(null));
-for (const control of document.querySelectorAll("[data-close]")) control.addEventListener("click", () => control.closest("dialog").close());
+for (const control of document.querySelectorAll("[data-close]")) {
+  control.addEventListener("click", () => {
+    if (!noteEditor.contains(control)) control.closest("dialog").close();
+    else if (!savingEditor) closeNoteEditor({ restoreFocus: true });
+  });
+}
+$("note-dialog").addEventListener("cancel", (event) => {
+  event.preventDefault();
+  if (!savingEditor) closeNoteEditor();
+});
+noteEditor.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && replyParent && !savingEditor) closeNoteEditor({ restoreFocus: true });
+});
+document.addEventListener("click", (event) => {
+  for (const menu of document.querySelectorAll(".note-menu[open]")) {
+    if (!menu.contains(event.target)) menu.open = false;
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  const menu = event.target.closest(".note-menu[open]");
+  if (!menu) return;
+  menu.open = false;
+  menu.querySelector("summary").focus();
+});
 for (const control of document.querySelectorAll("[data-filter]")) {
   control.addEventListener("click", () => {
     filter = control.dataset.filter;
@@ -783,12 +879,6 @@ $("undo").addEventListener("click", async () => {
 $("image-dialog").addEventListener("close", () => {
   $("full-image").removeAttribute("src");
   cleanImages();
-});
-$("note-dialog").addEventListener("close", () => {
-  editingNote = null;
-  replyParent = null;
-  noteUploads = [];
-  renderUploads("note");
 });
 window.addEventListener("popstate", applyRoute);
 window.addEventListener("hashchange", applyRoute);
